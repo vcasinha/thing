@@ -9,6 +9,7 @@
     {
         public:
             WiFiManager _wifiManager;
+            WiFiClient _wirelessClient;
 
         WiFiModule()
         {

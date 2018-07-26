@@ -13,7 +13,7 @@
             virtual void boot() {};
             virtual void setup() {};
             virtual void loop() {};
-            
+            virtual void callback(char * topic, unsigned char * payload, unsigned int length) {};
         protected:
             Application * _application;
     };

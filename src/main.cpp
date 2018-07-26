@@ -5,13 +5,19 @@
 #include "Application.h"
 #include "MQTTModule.h"
 #include "WiFiModule.h"
+#include "M1.h"
 
 #include "user_settings.h"
 
-Application app;
+Application app = Application(serial_port_baud_rate);
 WiFiModule wifi;
-MQTTModule mqtt;
-WiFiServer server(80);
+MQTTModule mqtt = MQTTModule(mqtt_hostname, mqtt_username, mqtt_password);
+M1 m1;
+
+void callback(char * topic, unsigned char * payload, unsigned int length)
+{
+    Serial.printf("Me too\n");
+}
 
 void setup() 
 {
@@ -20,15 +26,13 @@ void setup()
     Serial.printf("Load modules\n");
     app.loadModule(&wifi);
     app.loadModule(&mqtt);
+    app.loadModule(&m1);
     delay(1000);
-    Serial.printf("Modules boot initiated\n");
     app.setup();
-    delay(1000);
-    mqtt._client.publish("test", "something");
-    Serial.printf("Modules booted\n");
     delay(1000);
 }
 
 void loop() {
     app.loop();
+    delay(100);
 }

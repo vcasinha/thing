@@ -1,10 +1,5 @@
 #include "Application.h"
 
-Application::Application()
-{
-    Serial.begin(SERIAL_MONITOR_BAUD);
-}
-
 void Application::loadModule(Module * module)
 {
     module->setApplication(this);
@@ -18,11 +13,9 @@ Module * Application::getModule(const char * name)
     delay(10);
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
-        Serial.printf("Iterating module %d\n", c);
         Module * m = this->_modules[c];
         if(strcmp(m->_name, name) == 0)
         {
-            Serial.printf("Found module %s\n", m->_name);
             return m;
         }
     }
@@ -32,15 +25,20 @@ Module * Application::getModule(const char * name)
 
 void Application::setup(void)
 {
+    Serial.printf("Initializing %d modules\n", this->_modules.size());
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
+        Serial.printf("\n    * Booting module '%s' * \n", this->_modules[c]->_name);
         this->_modules[c]->boot();
     }
+    delay(100);
 
     for(unsigned int c = 0;c<this->_modules.size();c++)
     {
+        Serial.printf("\n    * Setting up module '%s' * \n", this->_modules[c]->_name);
         this->_modules[c]->setup();
     }
+    Serial.printf("Modules initialized\n");
 }
 
 void Application::loop(void)
@@ -50,5 +48,5 @@ void Application::loop(void)
         this->_modules[c]->loop();
         delay(10);
     }
-    delay(100);
+    
 }

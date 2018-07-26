@@ -7,14 +7,16 @@
 
     #include "Module.h"
 
-    #define SERIAL_MONITOR_BAUD 115200
     class Module;
     class Application
     {
         public:
             PubSubClient _client;
             
-            Application();
+            Application(unsigned int baud_rate)
+            {
+                Serial.begin(baud_rate);
+            }
 
             void callback(char * topic, unsigned char * payload, unsigned int length)
             {
