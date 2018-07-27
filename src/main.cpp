@@ -1,38 +1,43 @@
 #include <Arduino.h>
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
 
 #include "Application.h"
 #include "MQTTModule.h"
 #include "WiFiModule.h"
-#include "M1.h"
+#include "RFModule.h"
+#include "DHTModule.h"
+#include "ConfigModule.h"
 
 #include "user_settings.h"
 
-Application app = Application(serial_port_baud_rate);
+Application app = Application("remembot", serial_port_baud_rate);
 WiFiModule wifi;
 MQTTModule mqtt = MQTTModule(mqtt_hostname, mqtt_username, mqtt_password);
-M1 m1;
-
+RFModule rf = RFModule(D5, D6);
+DHTModule dht = DHTModule(D4);
+ConfigModule config;
 void callback(char * topic, unsigned char * payload, unsigned int length)
 {
-    Serial.printf("Me too\n");
+    Serial.printf("I'm outside and I've heard '%s'\n", topic);
 }
 
 void setup() 
 {
-    Serial.printf("Application start\n");
+    Serial.printf("Application boot\n");
     delay(1000);
     Serial.printf("Load modules\n");
     app.loadModule(&wifi);
     app.loadModule(&mqtt);
-    app.loadModule(&m1);
+    app.loadModule(&rf);
+    app.loadModule(&dht);
+    app.loadModule(&config);
     delay(1000);
     app.setup();
     delay(1000);
+    Serial.printf("Application ready\n");
 }
 
-void loop() {
+void loop(void)
+{
     app.loop();
-    delay(100);
+    delay(10);
 }

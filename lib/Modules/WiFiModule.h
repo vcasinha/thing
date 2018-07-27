@@ -11,17 +11,17 @@
             WiFiManager _wifiManager;
             WiFiClient _wirelessClient;
 
-        WiFiModule()
-        {
-            _name = "WiFi";
+            WiFiModule()
+            {
+                _name = "WiFi";
 
-        }
+            }
 
-        void setup(void)
-        {
-            _wifiManager.setConfigPortalTimeout(180);
-            _wifiManager.autoConnect();
-        }
+            void setup(void)
+            {
+                _wifiManager.setConfigPortalTimeout(180);
+                _wifiManager.autoConnect();
+            }
     };
 
 #endif

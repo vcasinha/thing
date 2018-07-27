@@ -9,25 +9,22 @@
     
     #include "Module.h"
 
-    #define MQTT_HOSTNAME "0.0.0.0"
-    #define MQTT_USERNAME "none"
-    #define MQTT_PASSWORD "none"
-
     class MQTTModule : public Module 
     {
         public:
             PubSubClient _client;
             WiFiModule * _wifiModule;
-            
+            unsigned int _counter = 0;
+
             const char * _hostname;
             const char * _username;
             const char * _password;
 
             Vector<Module *> _callbacks;
 
-            WiFiManagerParameter _mqtt_hostname = WiFiManagerParameter("hostname", "mqtt hostname", "0.0.0.0", 40);
-            WiFiManagerParameter _mqtt_username = WiFiManagerParameter("username", "mqtt username", "none", 20);
-            WiFiManagerParameter _mqtt_password = WiFiManagerParameter("password", "mqtt password", "none", 20);
+            WiFiManagerParameter _mqtt_hostname = WiFiManagerParameter("mqtt_hostname", "mqtt hostname", "0.0.0.0", 40);
+            WiFiManagerParameter _mqtt_username = WiFiManagerParameter("mqtt_username", "mqtt username", "none", 20);
+            WiFiManagerParameter _mqtt_password = WiFiManagerParameter("mqtt_password", "mqtt password", "none", 20);
 
         MQTTModule(const char * hostname, const char * username, const char * password)
         {
@@ -37,13 +34,18 @@
             _mqtt_password = WiFiManagerParameter("password", "mqtt password", password, 20);
         }
 
-        virtual void boot(void)
+        ~MQTTModule()
+        {
+            String topic = String("home/") + this->_application->_id + String("/state");
+            this->_client.publish(topic.c_str(), "OFF");
+        }
+
+        virtual void boot(JsonObject & config)
         {
             this->_wifiModule = (WiFiModule *) this->_application->getModule("WiFi");
             this->_wifiModule->_wifiManager.addParameter(&_mqtt_hostname);
             this->_wifiModule->_wifiManager.addParameter(&_mqtt_username);
             this->_wifiModule->_wifiManager.addParameter(&_mqtt_password);
-
             _client.setClient(this->_wifiModule->_wirelessClient);
         }
 
@@ -51,45 +53,47 @@
         {
             _client.setCallback([this] (char * topic, unsigned char * payload, unsigned int length) { this->callback(topic, payload, length); });
             this->connect();
-            this->_client.subscribe("test");
+            String topic = String("home/") + this->_application->_id + String("/state");
+            this->_client.publish(topic.c_str(), "ON");
         }
 
         virtual void loop(void)
         {
-            this->_client.loop();
             this->connect();
+            this->_client.loop();
         }
 
         void connect(void)
         {
             if(WiFi.status() == WL_CONNECTED)
             {
-                // Loop until we're reconnected to the MQTT server
-                unsigned int counter = 0;
-                while (_client.connected() == false) 
+                while (this->_client.connected() == false) 
                 {
                     Serial.printf("Fetching MQTT settings from WiFiManager\n");
                     _hostname = _mqtt_hostname.getValue();
                     _username = _mqtt_username.getValue();
                     _password = _mqtt_password.getValue();
 
-                    Serial.printf("Connect to MQTT %s as '%s' : '%s' attempt %d\n", _hostname, _username, _password, counter);
-                    _client.setServer(_hostname, 1883);
-                    _client.connect(_hostname, _username, _password);
+                    Serial.printf("Connect to MQTT %s as '%s' : '%s' attempt %d\n", _hostname, _username, _password, _counter);
+                    this->_client.setServer(_hostname, 1883);
+                    this->_client.connect(_hostname, _username, _password);
                     
-                    if(_client.connected() == false && counter > 3)
+                    if(this->_client.connected() == false)
                     {
+                        _counter++;
                         Serial.printf("Could not connect to MQTT at %s\n", _hostname);
-                        abort();
+                        if(_counter > 5)
+                        {
+                            abort();
+                        }
                     }
-                    counter++;
                 }
             }
         }
 
         void registerCallback(Module * module)
         {
-            Serial.printf("Module %s requested MQTT callback", module->_name);
+            Serial.printf("Module %s requested MQTT callback\n", module->_name);
             _callbacks.push(module);
         }
 
@@ -100,6 +104,16 @@
             {
                 _callbacks[c]->callback(topic, payload, length);
             }
+        }
+
+        void publish(const char * topic, const char * payload)
+        {
+            this->_client.publish(topic, payload);
+        }
+
+        void subscribe(const char * topic)
+        {
+            this->_client.subscribe(topic);
         }
     };
 
