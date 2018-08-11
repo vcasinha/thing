@@ -1,43 +1,46 @@
 #include <Arduino.h>
+#include <ArduinoLog.h>
 
 #include "Application.h"
-#include "MQTTModule.h"
-#include "WiFiModule.h"
 #include "RFModule.h"
 #include "DHTModule.h"
-#include "ConfigModule.h"
-
+#include "StorageModule.h"
+#include "WiFiModule.h"
+#include "MQTTModule.h"
+#include "DeviceModule.h"
+#include "ServerModule.h"
+#include "BlinkModule.h"
 #include "user_settings.h"
 
-Application app = Application("remembot", serial_port_baud_rate);
-WiFiModule wifi;
-MQTTModule mqtt = MQTTModule(mqtt_hostname, mqtt_username, mqtt_password);
-RFModule rf = RFModule(D5, D6);
-DHTModule dht = DHTModule(D4);
-ConfigModule config;
-void callback(char * topic, unsigned char * payload, unsigned int length)
-{
-    Serial.printf("I'm outside and I've heard '%s'\n", topic);
-}
+Application * app;
 
 void setup() 
 {
+    Serial.begin(serial_port_baud_rate);
+    //ESP.reset();
+    //Serial.setDebugOutput(true);
+    delay(1000);
+    app = new Application(name);
     Serial.printf("Application boot\n");
     delay(1000);
     Serial.printf("Load modules\n");
-    app.loadModule(&wifi);
-    app.loadModule(&mqtt);
-    app.loadModule(&rf);
-    app.loadModule(&dht);
-    app.loadModule(&config);
+    app->loadModule(new DeviceModule());
+    app->loadModule(new WiFiModule());
+    app->loadModule(new MQTTModule());
+    app->loadModule(new StorageModule());
+    app->loadModule(new ServerModule());
+    //app->loadModule(new DHTModule());
+    //app->loadModule(new RFModule());
+    app->loadModule(new BlinkModule());
+
     delay(1000);
-    app.setup();
+    app->setup();
     delay(1000);
     Serial.printf("Application ready\n");
 }
 
 void loop(void)
 {
-    app.loop();
+    app->loop();
     delay(10);
 }
