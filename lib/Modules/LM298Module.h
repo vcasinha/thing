@@ -13,13 +13,13 @@ class LM298Module: public Module
 
         LM298Module()
         {
-            _name = "LM298";
+            _name = "actuator.lm298";
             _update_period = 50;
         }
 
         virtual void boot(void)
         {
-            this->_mqtt = (MQTTModule *) this->_application->getModule("MQTT");
+            this->_mqtt = (MQTTModule *) this->_application->getInstance("mqtt");
             this->_mqtt->registerCallback(this);
         }
 

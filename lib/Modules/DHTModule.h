@@ -4,38 +4,51 @@
 #include "Module.h"
 
 #include "MQTTModule.h"
-#include "ConfigModule.h"
 
 
 class DHTModule: public Module 
 {
     public:
         MQTTModule * _mqtt;
-        ConfigModule * _config;
+        WiFiModule * _wifiModule;
         unsigned int _counter = 0;
         float _humidity;
         float _temperature;
         dht _dht;
         unsigned int _pin;
         const char * default_configuration = "{\"pin\":\"value\"}";
-        DHTModule(unsigned int pin)
+        WiFiManagerParameter * _pinParameter;
+        
+        DHTModule()
         {
-            this->_name = "DHT";
-            this->_update_period = 60 * 1000;
-            this->_pin = pin;
+            this->_name = "sensor.dht";
+            this->_loop_period_ms = 60 * 1000;
         }
 
         virtual void boot(JsonObject & config)
         {
-            this->_mqtt = (MQTTModule *) this->_application->getModule("MQTT");
+            String pin_s((int)config["pin"]);
+
+            this->_mqtt = (MQTTModule *) this->_application->getModule("mqtt");
+            this->_wifiModule = (WiFiModule * ) this->_application->getModule("wifi");
+            this->_wifiModule->addParameterHTML("<p>DHT</p>");
+            this->_wifiModule->addParameter("dht_pin", "Pin number", pin_s.c_str(), 2);
+
             this->_mqtt->registerCallback(this);
-            this->_pin = config["pin"] | D4;
-            Serial.printf("DHT PIN: %d\n", this->_pin);
         }
 
         virtual void setup(void)
         {
-            Serial.println(DHT_LIB_VERSION);
+            Serial.printf("DHT %s\n", DHT_LIB_VERSION);
+            String tnp = this->_wifiModule->getParameter("dht_pin")->getValue();
+            this->_pin = tnp.toInt();
+            Serial.printf("DHT PIN: %d\n", this->_pin);
+        }
+
+        virtual DHTModule * instance(void)
+        {
+            DHTModule * instance = new DHTModule();
+            return instance;
         }
 
         virtual void loop(void)
@@ -51,9 +64,9 @@ class DHTModule: public Module
                     // DISPLAY DATA
                     Serial.printf("Humidity %.2f%% Temperature %.2fº\n", humidity, temperature);
                     s = String(temperature);
-                    this->_mqtt->_client.publish("home/sensor/office_temperature/state", s.c_str());
+                    this->_mqtt->publishState("sensor", "temperature", s.c_str());
                     s = String(humidity);
-                    this->_mqtt->_client.publish("home/sensor/office_humidity/state", s.c_str());
+                    this->_mqtt->publishState("sensor", "humidity", s.c_str());
                     break;
                 case DHTLIB_ERROR_CHECKSUM:
                     Serial.print("Checksum error\n"); 
