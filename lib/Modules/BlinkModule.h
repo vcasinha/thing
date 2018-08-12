@@ -9,6 +9,7 @@
 class BlinkModule : public Module
 {
   public:
+    MQTTModule *_mqtt;
     unsigned long _time = 0;
     bool _state = false;
     unsigned int _pin = D5;
@@ -21,6 +22,7 @@ class BlinkModule : public Module
 
     virtual void boot(JsonObject &config)
     {
+        this->_mqtt = (MQTTModule *)this->_application->getModule("mqtt");
         pinMode(this->_pin, OUTPUT);
     }
 
@@ -29,6 +31,7 @@ class BlinkModule : public Module
         this->_state = !this->_state;
         digitalWrite(this->_pin, this->_state);
         Serial.printf("Blink %d\n", this->_state);
+        //this->_mqtt->publishState("sensor", "state", this->_state ? "ON" : "OFF");
     }
 };
 

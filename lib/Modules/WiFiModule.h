@@ -15,6 +15,7 @@
             {
                 _name = "wifi";
                 this->_wifiManager = new WiFiManager();
+                this->_wifiManager->setDebugOutput(false);
             }
 
             void setup(void)

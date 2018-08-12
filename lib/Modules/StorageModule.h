@@ -13,38 +13,43 @@
             StorageModule()
             {
                 this->_name = "storage";
-                bool result = SPIFFS.begin();
-                if(result)
+                if (SPIFFS.begin() == false)
                 {
-                    Serial.printf("    File system initialized\n");
-                    Dir dir = SPIFFS.openDir("/");
-                    Serial.printf("    List of files\n");
-                    while (dir.next()) 
-                    {
-                        File f = dir.openFile("r");
-                        Serial.printf("    - Filename: %s - %d\n", dir.fileName().c_str(), f.size());
-                        f.close();
-                    }
-                }
-                else
-                {
-                    Serial.printf("\n\n*** File system could not initalize ***\n");
-                    abort();
+                    Serial.printf("** Error initializing filesystem");
                 }
             }
 
-            void write(const char * filename, const char * module_data)
+            bool write(const char * filename, const char * module_data)
             {
                 File file = SPIFFS.open(filename, "w");
                 if (!file) 
                 {
                     Serial.printf("Could not open file %s\n", filename);
+                    return false;
                 }
 
                 //Serial.printf("Writing on %s the following data:\n%s\n", filename, module_data);
 
                 file.println(module_data);
                 file.close();
+
+                return true;
+            }
+
+            File getFile(const char * filename, const char * mode)
+            {
+                return SPIFFS.open(filename, mode);
+            }
+
+            bool exists(const char * filename)
+            {
+                if (SPIFFS.exists(filename) == false)
+                {
+                    Serial.printf("File does not exist %s\n", filename);
+                    return false;
+                }
+
+                return true;
             }
 
             String read(const char * filename)
@@ -71,6 +76,11 @@
                 //Serial.printf("Read from %s the following data:\n%s\n", filename, data.c_str());
 
                 return data;
+            }
+
+            Dir opendir(const char * path)
+            {
+                return SPIFFS.openDir(path);
             }
     };
 #endif

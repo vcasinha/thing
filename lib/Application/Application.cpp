@@ -4,7 +4,6 @@
 #include "Application.h"
 #include "StorageModule.h"
 
-
 Application::Application(const char * id)
 {
     this->_id = id;
@@ -59,8 +58,9 @@ void Application::setup(void)
     char filename[100];
     File file;
     String config_json, default_config = "{\"device\":{\"name\":\"devisso\",\"location\":\"office\"},\"mqtt\":{\"hostname\":\"192.168.0.200\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"},\"rf\":{\"receive_pin\":12,\"transmit_pin\":14},\"dht\":{\"pin\":2}}";
+
     StorageModule * storage = (StorageModule *) this->getModule("storage");
-    
+
     sprintf(filename, "/%s_configuration.json", this->_id);
     config_json = storage->read(filename);
     
@@ -93,7 +93,6 @@ void Application::setup(void)
         const char * enabled = module_config["enabled"] | "true";
         if(strcmp(enabled, "true") == 0)
         {
-            Serial.printf("Config start:\n");
             module_config.prettyPrintTo(Serial);
             Serial.printf("\n");
             
@@ -107,9 +106,10 @@ void Application::setup(void)
         }
     }
 
+    config_json = "";
     modules_configuration.printTo(config_json);
     storage->write(filename, config_json.c_str());
-
+    Serial.printf("Setup modules...\n");
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
         Module * module = this->_modules[c];
@@ -132,8 +132,8 @@ void Application::loop(void)
         if(module->_enabled == true)
         {
             unsigned long current_time = millis() + module->_loop_period_ms;
-            
-            if((current_time - module->_loop_time) > module->_loop_period_ms)
+
+            if (module->_loop_period_ms == 0 || (current_time - module->_loop_time) > module->_loop_period_ms)
             {
                 module->loop();
                 delay(10);
