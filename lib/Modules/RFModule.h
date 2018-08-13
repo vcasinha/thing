@@ -96,7 +96,7 @@
                     root.printTo(payload);
                     sprintf(topic, "home/binary_sensor/%s/state", id);
                     
-                    this->_mqttModule->publishState("binary_sensor", "rf", payload);
+                    //this->_mqttModule->publishState("binary_sensor", "rf", payload);
                     this->_mqttModule->publish(topic, payload);
                     this->_value = tristate;
                     this->_lastTime = current;

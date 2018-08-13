@@ -3,6 +3,11 @@
 
 #include "Application.h"
 #include "StorageModule.h"
+#include "StorageModule.h"
+#include "WiFiModule.h"
+#include "MQTTModule.h"
+#include "DeviceModule.h"
+#include "ServerModule.h"
 
 Application::Application(const char * id)
 {
@@ -28,6 +33,12 @@ Application::Application(const char * id)
     }
 
     delay(1000);
+    Serial.printf("Load system modules\n");
+    this->loadModule(new DeviceModule());
+    this->loadModule(new WiFiModule());
+    this->loadModule(new MQTTModule());
+    this->loadModule(new StorageModule());
+    this->loadModule(new ServerModule());
 }
 
 void Application::loadModule(Module * module)
@@ -115,7 +126,7 @@ void Application::setup(void)
         Module * module = this->_modules[c];
         if(module->_enabled == true)
         {
-            Serial.printf("\n    * Setting up module '%s' * \n", module->_name);
+            Serial.printf("* Setting up module '%s' * \n", module->_name);
             module->setup();
             delay(100);
         }

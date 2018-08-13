@@ -10,7 +10,7 @@
 
 #include "Module.h"
 #include "WiFiModule.h"
-void (*resetFunc)(void) = 0;
+
 class ServerModule : public Module
 {
   public:

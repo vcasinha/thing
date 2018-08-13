@@ -6,10 +6,10 @@
     #include "Module.h"
     #include "WiFiModule.h"
 
-    class DeviceModule : public Module 
+    class DeviceModule : public Module
     {
         public:
-            WiFiModule * _wifiModule;
+            WiFiModule *_wifiModule;
             String _boardID;
             String _hostname;
             String _location;
@@ -17,7 +17,8 @@
             DeviceModule()
             {
                 this->_name = "device";
-                char tmp[10]; sprintf(tmp, "ESP%6X", ESP.getFlashChipId());
+                char tmp[10];
+                sprintf(tmp, "ESP%6X", ESP.getFlashChipId());
                 this->_boardID = tmp;
             }
 
@@ -25,9 +26,9 @@
             {
             }
 
-            virtual void boot(JsonObject & config)
+            virtual void boot(JsonObject &config)
             {
-                this->_wifiModule = (WiFiModule *) this->_application->getModule("wifi");
+                this->_wifiModule = (WiFiModule *)this->_application->getModule("wifi");
                 this->_hostname = config["name"] | this->_boardID.c_str();
                 this->_location = config["location"] | "somewhere";
             }
