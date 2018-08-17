@@ -14,10 +14,10 @@
             WiFiModule * _wifiModule;
             DeviceModule *_deviceModule;
             unsigned int _counter = 0;
-            const char * _hostname;
-            const char * _username;
-            const char * _password;
-            const char * _rootTopic;
+            char _hostname[100];
+            char _username[20];
+            char _password[20];
+            char _rootTopic[20];
 
             Vector<Module *> _callbacks;
 
@@ -37,10 +37,10 @@
                 this->_wifiModule = (WiFiModule *) this->_application->getModule("wifi");
                 this->_deviceModule = (DeviceModule * ) this->_application->getModule("device");
 
-                this->_hostname = config["hostname"] | "";
-                this->_username = config["username"] | "";
-                this->_password = config["password"] | "";
-                this->_rootTopic = config["root_topic"] | "home";
+                strcpy(this->_hostname, config["hostname"] | "");
+                strcpy(this->_username, config["username"] | "");
+                strcpy(this->_password, config["password"] | "");
+                strcpy(this->_rootTopic, config["root_topic"] | "home");
                 this->_client.setClient(this->_wifiModule->_wirelessClient);
             }
 
@@ -73,7 +73,7 @@
                             if(this->_counter >= 5)
                             {
                                 Serial.printf("  ** Ignoring MQTT after %d attempts\n", this->_counter);
-                                this->disable();
+                                //this->disable();
                                 return;
                             }
                             delay(500);
