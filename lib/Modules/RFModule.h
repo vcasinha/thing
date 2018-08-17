@@ -15,8 +15,7 @@
     {
         public:
             unsigned int _format = RFMQTT_TRISTATE;
-            MQTTModule * _mqttModule;
-            WiFiModule * _wifiModule;
+            MQTTModule * _mqtt;
             RCSwitch _driver;
             unsigned int _rx_pin = D4;
             unsigned int _tx_pin = D5;
@@ -33,30 +32,19 @@
 
             virtual void boot(JsonObject & config)
             {
-                this->_wifiModule = (WiFiModule * ) this->_application->getModule("wifi");
-                this->_mqttModule = (MQTTModule *) this->_application->getModule("mqtt");
-                this->_mqttModule->registerCallback(this);
+                this->_mqtt = (MQTTModule *) this->_application->getModule("mqtt");
+                this->_mqtt->registerCallback(this);
 
-                this->_wifiModule->addParameterHTML("<p>DHT</p>");
-                String tmp = String((int)config["transmit_pin"]);
-                this->_wifiModule->addParameter("rf_transmit_pin", "Transmit pin", tmp.c_str(), 2);
-                tmp = String((int)config["receive_pin"]);
-                this->_wifiModule->addParameter("rf_receive_pin", "Receive pin", tmp.c_str(), 2);
+                this->_rx_pin = config["receive_pin"] | 0;
+                this->_tx_pin = config["transmit_pin"] | 0;
+
+                Serial.printf("RF Receive pin: %d Transmit pin: %d\n", this->_rx_pin, this->_tx_pin);
             }
 
             virtual void setup(void)
             {
-                String p;
-
-                p = this->_wifiModule->getParameter("rf_receive_pin")->getValue();
-                this->_rx_pin = p.toInt();
-                p = this->_wifiModule->getParameter("rf_transmit_pin")->getValue();
-                this->_tx_pin = p.toInt();
-
                 this->_driver.enableTransmit(this->_tx_pin);
                 this->_driver.enableReceive(this->_rx_pin);
-
-                Serial.printf("RF Receive pin: %d Transmit pin: %d\n", this->_rx_pin, this->_tx_pin);
             }
 
             virtual void loop(void)
@@ -90,14 +78,22 @@
                     root["bit_length"] = bit_length;
                     root["tristate"] = tristate;
 
-                    char payload[256];
+                    char payload[512];
                     char topic[100];
 
                     root.printTo(payload);
-                    sprintf(topic, "home/binary_sensor/%s/state", id);
+                    sprintf(topic, "home/switch/rf/%s/state", id);
+                    if (id[23] == '0')
+                    {
+                        strcpy(payload, "OFF");
+                    }
+                    else
+                    {
+                        strcpy(payload, "ON");
+                    }
                     
-                    //this->_mqttModule->publishState("binary_sensor", "rf", payload);
-                    this->_mqttModule->publish(topic, payload);
+                    this->_mqtt->publish(topic, payload);
+
                     this->_value = tristate;
                     this->_lastTime = current;
                 }
@@ -109,7 +105,7 @@
                 String topic_string = String(topic);
                 Serial.printf("RF Bridge topic %s\n", topic_string.c_str());
 
-                if(topic_string.startsWith("home/rf/main/command"))
+                if(topic_string.startsWith("home/switch/rf/command"))
                 {
                     //Serial.printf("RF Bridge code %s\n", topic_string.c_str());
 

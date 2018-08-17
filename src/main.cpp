@@ -19,8 +19,8 @@ void setup()
     Serial.printf("Application boot\n");
     delay(1000);
     Serial.printf("Load modules\n");
-    //app->loadModule(new DHTModule());
-    //app->loadModule(new RFModule());
+    app->loadModule(new DHTModule());
+    app->loadModule(new RFModule());
     app->loadModule(new SwitchModule());
 
     delay(1000);

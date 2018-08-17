@@ -9,11 +9,11 @@ class DHTModule: public DeviceManagerModule
     public:
         DHTModule()
         {
-            this->_name = "sensor.dht";
+            this->_name = "dht";
             this->_loop_period_ms = 60 * 1000;
         }
 
-        virtual Device *makeDevice(JsonObject &config)
+        virtual Device * makeDevice()
         {
                 return new DHTDevice();
         }

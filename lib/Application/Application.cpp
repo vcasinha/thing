@@ -101,8 +101,11 @@ void Application::setup(void)
         Serial.printf("Boot module %s\n", module->_name);
 
         JsonObject &module_config = modules_configuration[module->_name];
-        const char * enabled = module_config["enabled"] | "true";
-        if(strcmp(enabled, "true") == 0)
+        bool disabled = module_config["disable"] | false;
+
+        module->_loop_period_ms = module_config["update_period"] | module->_loop_period_ms;
+
+        if (disabled == false)
         {
             module_config.prettyPrintTo(Serial);
             Serial.printf("\n");
@@ -112,7 +115,7 @@ void Application::setup(void)
         }
         else
         {
-            Serial.printf("Flagging module as disabled\n");
+            Serial.printf("* Module '%s' disabled\n", module->_name);
             module->_enabled = false;
         }
     }

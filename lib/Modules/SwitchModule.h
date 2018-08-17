@@ -11,7 +11,7 @@ class SwitchModule : public DeviceManagerModule
         SwitchModule()
         {
             this->_name = "switches";
-            this->_loop_period_ms = 100;
+            this->_loop_period_ms = 60 * 1000;
         }
 
         virtual Device * makeDevice()
