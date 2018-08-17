@@ -68,7 +68,7 @@ void Application::setup(void)
     DynamicJsonBuffer buffer;
     char filename[100];
     File file;
-    String config_json, default_config = "{\"device\":{\"name\":\"devisso\",\"location\":\"office\"},\"mqtt\":{\"hostname\":\"192.168.0.200\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"},\"rf\":{\"receive_pin\":12,\"transmit_pin\":14},\"dht\":{\"pin\":2}}";
+    String config_json, default_config = "{\"mqtt\":{\"hostname\":\"petitmaison.duckdns.org\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"}}";
 
     StorageModule * storage = (StorageModule *) this->getModule("storage");
 

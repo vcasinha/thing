@@ -17,8 +17,8 @@
             unsigned int _format = RFMQTT_TRISTATE;
             MQTTModule * _mqtt;
             RCSwitch _driver;
-            unsigned int _rx_pin = D4;
-            unsigned int _tx_pin = D5;
+            unsigned int _rx_pin = 0;
+            unsigned int _tx_pin = 0;
             bool _updated = false;
             const char * _value = "";
             unsigned int _delay = 500;

@@ -13,7 +13,7 @@ class DeviceManagerModule : public Module
     public:
         MQTTModule *_mqtt;
         bool _state = false;
-        unsigned int _pin = D5;
+        unsigned int _pin = 0;
         Vector<Device *> _devices;
         
 
