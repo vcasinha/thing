@@ -2,9 +2,10 @@
 #include <ArduinoLog.h>
 
 #include "Application.h"
+#include "DeviceManagerModule.h"
+#include "DHTFactory.h"
+#include "SwitchFactory.h"
 #include "RFModule.h"
-#include "DHTModule.h"
-#include "SwitchModule.h"
 #include "user_settings.h"
 
 Application * app;
@@ -19,9 +20,9 @@ void setup()
     Serial.printf("Application boot\n");
     delay(1000);
     Serial.printf("Load modules\n");
-    app->loadModule(new DHTModule());
+    //app->loadModule(new DHTLoader());
     app->loadModule(new RFModule());
-    app->loadModule(new SwitchModule());
+    //app->loadModule(new SwitchModule());
 
     delay(1000);
     app->setup();

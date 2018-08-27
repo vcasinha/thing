@@ -11,6 +11,7 @@ class Switch : public Device
     Switch()
     {
         this->_type = "switch";
+        this->_update_period = 60;
     }
 
     virtual void config(JsonObject &config)

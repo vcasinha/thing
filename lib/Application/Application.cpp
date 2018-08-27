@@ -8,6 +8,7 @@
 #include "MQTTModule.h"
 #include "DeviceModule.h"
 #include "ServerModule.h"
+#include "DeviceManagerModule.h"
 
 Application::Application(const char * id)
 {
@@ -39,6 +40,7 @@ Application::Application(const char * id)
     this->loadModule(new MQTTModule());
     this->loadModule(new StorageModule());
     this->loadModule(new ServerModule());
+    this->loadModule(new DeviceManagerModule());
 }
 
 void Application::loadModule(Module * module)

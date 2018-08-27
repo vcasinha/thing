@@ -2,7 +2,6 @@
     #define DEVICE_MODULE_H
 
     #include <Arduino.h>
-    #include <WiFiManager.h>
     #include "Module.h"
     #include "WiFiModule.h"
 
@@ -28,7 +27,6 @@
 
             virtual void boot(JsonObject &config)
             {
-                this->_wifiModule = (WiFiModule *)this->_application->getModule("wifi");
                 this->_hostname = config["name"] | this->_boardID.c_str();
                 this->_location = config["location"] | "somewhere";
             }

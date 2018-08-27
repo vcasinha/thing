@@ -19,12 +19,12 @@ class DHTDevice : public Device
     DHTDevice()
     {
         this->_type = "sensor";
+        this->_update_period = 60;
     }
 
     virtual void config(JsonObject &config)
     {
         this->_pin = config["pin"] | 0;
-        Serial.printf("DHT sensor %s on %s PIN:%d\n", this->_id.c_str(), this->_location.c_str(), this->_pin);
     }
 
     virtual void loop()

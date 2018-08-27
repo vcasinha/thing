@@ -2,16 +2,15 @@
 #define SWITCH_MODULE_H
 
 #include <Arduino.h>
-#include "DeviceManagerModule.h"
+#include "DeviceFactory.h"
 #include "Switch.h"
 
-class SwitchModule : public DeviceManagerModule
+class SwitchFactory : public DeviceFactory
 {
     public:
-        SwitchModule()
+        SwitchFactory()
         {
-            this->_name = "switches";
-            this->_loop_period_ms = 60 * 1000;
+            this->_deviceType = "switch";
         }
 
         virtual Device * makeDevice()
