@@ -6,6 +6,7 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+
 #include <FS.h>
 
 #include "Module.h"
@@ -18,10 +19,10 @@ class ServerModule : public Module
     StorageModule * _storageModule;
     ESP8266WebServer * _server;
 
+
     ServerModule()
     {
         this->_name = "server";
-        
     }
 
     ~ServerModule()
@@ -49,6 +50,22 @@ class ServerModule : public Module
             this->_server->handleClient();
             this->_deviceModule->restart();
         });
+
+        this->_server->on("/update", HTTP_GET, [this]() {
+            Serial.printf("Update requested\n");
+            if (!this->_server->hasArg("filename"))
+            {
+                this->_server->send(500, "application/json", "{\"_status\":\"filename argument is missing\"}");
+                return;
+            }
+
+            this->_server->send(200, "application/json", "{\"_status\":\"update requested\"}");
+            this->_server->handleClient();
+
+            String filename = this->_server->arg("filename");
+            this->_deviceModule->update(filename);
+        });
+
         this->_server->on("/read", HTTP_GET, [this]() {
             this->handleFileRead();
         });
