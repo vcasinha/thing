@@ -10,6 +10,7 @@
     class MQTTModule : public Module 
     {
         public:
+            WiFiClient _wifiClient;
             PubSubClient * _client;
             WiFiModule * _wifiModule;
             DeviceModule *_deviceModule;
@@ -45,7 +46,8 @@
                 strcpy(this->_username, config["username"] | "");
                 strcpy(this->_password, config["password"] | "");
                 strcpy(this->_rootTopic, config["root_topic"] | "home");
-                this->_client = new PubSubClient(this->_hostname, 1883, this->_wifiModule->_wirelessClient);
+
+                this->_client = new PubSubClient(this->_hostname, 1883, this->_wifiClient);
             }
 
             virtual void setup(void)
@@ -56,12 +58,20 @@
             
             virtual void loop(void)
             {
-                this->connect();
-                bool status = this->_client->loop();
-                if(!status)
+                if(WiFi.getMode() == WIFI_AP)
                 {
-                    Serial.printf("(MQTT) ** Loop failed - Force disconnection\n");
-                    this->_client->disconnect();
+                    return;
+                }
+
+                this->connect();
+                if (WiFi.status() == WL_CONNECTED)
+                {
+                    bool status = this->_client->loop();
+                    if (!status)
+                    {
+                        Serial.printf("(MQTT) ** Loop failed - Force disconnection\n");
+                        this->_client->disconnect();
+                    }
                 }
             }
 

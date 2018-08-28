@@ -2,16 +2,13 @@
     #define DEVICE_MODULE_H
 
     #include <Arduino.h>
-    #include "Module.h"
-    #include "WiFiModule.h"
-    #include <ESP8266HTTPClient.h>
+    
     #include <ESP8266httpUpdate.h>
     #include <ArduinoOTA.h>
-    
+    #include "Module.h"
     class DeviceModule : public Module
     {
         public:
-            WiFiModule *_wifiModule;
             String _boardID;
             String _hostname;
             String _location;
@@ -85,7 +82,7 @@
                 delay(500);
 
                 //t_httpUpdate_return ret = ESPhttpUpdate.update(url, "", fingerprint);
-                t_httpUpdate_return ret = ESPhttpUpdate.update("petitmaison.duckdns.org", 8123, uri, "", httpsFingerprint);
+                t_httpUpdate_return ret = ESPhttpUpdate.update("petitmaison.duckdns.org", 8123, uri, "", fingerprint);
                 switch (ret)
                 {
                     case HTTP_UPDATE_FAILED:

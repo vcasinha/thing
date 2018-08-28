@@ -6,19 +6,24 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-
+#include <PersWiFiManager.h>
+#include <DNSServer.h>
 #include <FS.h>
 
 #include "Module.h"
 #include "WiFiModule.h"
+
+#define WIFI_HTM_PROGMEM
 
 class ServerModule : public Module
 {
   public:
     DeviceModule * _deviceModule;
     StorageModule * _storageModule;
-    ESP8266WebServer * _server;
-
+    ESP8266WebServer * _webServer;
+    DNSServer *_nameServer;
+    PersWiFiManager * _wifiManager;
+    
 
     ServerModule()
     {
@@ -33,6 +38,10 @@ class ServerModule : public Module
     {
         this->_deviceModule = (DeviceModule *)this->_application->getModule("device");
         this->_storageModule = (StorageModule *)this->_application->getModule("storage");
+        this->_nameServer = new DNSServer();
+        this->_webServer = new ESP8266WebServer(80);
+        
+        this->_wifiManager = new PersWiFiManager(this->_webServer, this->_nameServer);
     }
 
     virtual void setup(void)
@@ -41,70 +50,72 @@ class ServerModule : public Module
         hostname = this->_deviceModule->_hostname.c_str();
         MDNS.begin(hostname);
 
-        this->_server = new ESP8266WebServer(80);
-        
+        this->_wifiManager->setApCredentials(this->_deviceModule->_hostname);
+        this->_wifiManager->begin();
+
         Serial.printf("Open browser on http://%s.local\n", hostname);
-        this->_server->on("/restart", HTTP_GET, [this]() {
+        this->_webServer->on("/restart", HTTP_GET, [this]() {
             Serial.printf("Restart requested\n");
-            this->_server->send(200, "application/json", "{\"_status\":\"Restarting\"}");
-            this->_server->handleClient();
+            this->_webServer->send(200, "application/json", "{\"_status\":\"Restarting\"}");
+            this->_webServer->handleClient();
             this->_deviceModule->restart();
         });
 
-        this->_server->on("/update", HTTP_GET, [this]() {
+        this->_webServer->on("/update", HTTP_GET, [this]() {
             Serial.printf("Update requested\n");
-            if (!this->_server->hasArg("filename"))
+            if (!this->_webServer->hasArg("filename"))
             {
-                this->_server->send(500, "application/json", "{\"_status\":\"filename argument is missing\"}");
+                this->_webServer->send(500, "application/json", "{\"_status\":\"filename argument is missing\"}");
                 return;
             }
 
-            this->_server->send(200, "application/json", "{\"_status\":\"update requested\"}");
-            this->_server->handleClient();
+            this->_webServer->send(200, "application/json", "{\"_status\":\"update requested\"}");
+            this->_webServer->handleClient();
 
-            String filename = this->_server->arg("filename");
+            String filename = this->_webServer->arg("filename");
             this->_deviceModule->update(filename);
         });
 
-        this->_server->on("/read", HTTP_GET, [this]() {
+        this->_webServer->on("/read", HTTP_GET, [this]() {
             this->handleFileRead();
         });
 
-        this->_server->on("/write", HTTP_POST, [this]() {
+        this->_webServer->on("/write", HTTP_POST, [this]() {
             this->handleFileWrite();
         });
 
-        this->_server->on("/list", HTTP_GET, [this]() {
+        this->_webServer->on("/list", HTTP_GET, [this]() {
             this->handleFileList();
         });
 
-        this->_server->on("/all", HTTP_GET, [this]() {
+        this->_webServer->on("/all", HTTP_GET, [this]() {
             String json = "{";
             json += "\"heap\":" + String(ESP.getFreeHeap());
             json += ", \"analog\":" + String(analogRead(A0));
             json += ", \"gpio\":" + String((uint32_t)(((GPI | GPO) & 0xFFFF) | ((GP16I & 0x01) << 16)));
             json += "}";
-            this->_server->send(200, "application/json", json);
+            this->_webServer->send(200, "application/json", json);
             json = String();
         });
 
-        this->_server->begin();
+        this->_webServer->begin();
     }
 
     virtual void loop(void)
     {
-        this->_server->handleClient();
+        this->_webServer->handleClient();
+        this->_nameServer->processNextRequest();
     }
 
     void handleFileList()
     {
-        if (!this->_server->hasArg("path"))
+        if (!this->_webServer->hasArg("path"))
         {
-            this->_server->send(500, "application/json", "{\"_status\":\"Path argument is missing\"}");
+            this->_webServer->send(500, "application/json", "{\"_status\":\"Path argument is missing\"}");
             return;
         }
 
-        String path = this->_server->arg("path");
+        String path = this->_webServer->arg("path");
         Serial.println("handleFileList: " + path);
 
         Dir dir = this->_storageModule->opendir(path.c_str());
@@ -128,30 +139,30 @@ class ServerModule : public Module
         }
 
         output += "]";
-        this->_server->send(200, "text/json", output);
+        this->_webServer->send(200, "text/json", output);
     }
 
     void handleFileRead()
     {
         String contentType = "application/json";
 
-        if (!this->_server->hasArg("path"))
+        if (!this->_webServer->hasArg("path"))
         {
-            this->_server->send(500, "application/json", "{\"_status\":\"Path argument is missing\"}");
+            this->_webServer->send(500, "application/json", "{\"_status\":\"Path argument is missing\"}");
             return;
         }
 
-        String path = this->_server->arg("path");
+        String path = this->_webServer->arg("path");
         Serial.printf("** Read file '%s'\n", path.c_str());
         if (this->_storageModule->exists(path.c_str()) == false)
         {
             Serial.printf("** File not found '%s'\n", path.c_str());
-            this->_server->send(400, "application/json", "{\"_status\":\"File does not exist\"}");
+            this->_webServer->send(400, "application/json", "{\"_status\":\"File does not exist\"}");
             return;
         }
 
         File file = this->_storageModule->getFile(path.c_str(), "r");
-        this->_server->streamFile(file, contentType);
+        this->_webServer->streamFile(file, contentType);
         file.close();
     }
 
@@ -159,28 +170,28 @@ class ServerModule : public Module
     {
         String contentType = "application/json";
 
-        if (!this->_server->hasArg("path"))
+        if (!this->_webServer->hasArg("path"))
         {
-            this->_server->send(500, "application/json", "{\"_status\":\"Path argument is missing\"}");
+            this->_webServer->send(500, "application/json", "{\"_status\":\"Path argument is missing\"}");
             return;
         }
 
-        if (!this->_server->hasArg("plain"))
+        if (!this->_webServer->hasArg("plain"))
         {
-            this->_server->send(500, "application/json", "{\"_status\":\"Body missing\"}");
+            this->_webServer->send(500, "application/json", "{\"_status\":\"Body missing\"}");
             return;
         }
-        String body = this->_server->arg("plain");
-        String path = this->_server->arg("path");
+        String body = this->_webServer->arg("plain");
+        String path = this->_webServer->arg("path");
         Serial.printf("** Write file '%s'\n", path.c_str());
 
         if(this->_storageModule->write(path.c_str(), body.c_str()) == false)
         {
-            this->_server->send(500, "application/json", "{\"_status\":\"Could not write\"}");
+            this->_webServer->send(500, "application/json", "{\"_status\":\"Could not write\"}");
             return;
         }
 
-        this->_server->send(500, "application/json", "{\"_status\":\"OK\"}");
+        this->_webServer->send(500, "application/json", "{\"_status\":\"OK\"}");
     }
 };
 
