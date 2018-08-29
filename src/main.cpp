@@ -16,8 +16,8 @@ void setup()
     //ESP.reset();
     //Serial.setDebugOutput(true);
     delay(1000);
-    app = new Application(name);
-    Serial.printf("Application boot\n");
+    Serial.printf("\n\n%s v%s\n", NAME, FW_VERSION);
+    app = new Application("robot");
     delay(1000);
     Serial.printf("Load modules\n");
     //app->loadModule(new DHTLoader());
@@ -26,7 +26,6 @@ void setup()
 
     delay(1000);
     app->setup();
-    delay(1000);
     Serial.printf("Application ready\n");
 }
 

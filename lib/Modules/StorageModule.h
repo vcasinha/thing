@@ -5,7 +5,6 @@
     #include <FS.h>
 
     #include "Module.h"
-    #include "MQTTModule.h"
 
     class StorageModule: public Module 
     {

@@ -13,16 +13,16 @@
 Application::Application(const char * id)
 {
     this->_id = id;
-    Serial.printf("\n\n%s booting\n", this->_id);
+    Serial.printf("Booting applicatioin '%s'\n", this->_id);
     uint32_t realSize = ESP.getFlashChipRealSize();
     uint32_t ideSize = ESP.getFlashChipSize();
     FlashMode_t ideMode = ESP.getFlashChipMode();
 
-    Serial.printf("Flash real id: %08X\n", ESP.getFlashChipId());
-    Serial.printf("Flash real size: %u bytes\n\n", realSize);
-    Serial.printf("Flash ide  size: %u bytes\n", ideSize);
-    Serial.printf("Flash ide speed: %u Hz\n", ESP.getFlashChipSpeed());
-    Serial.printf("Flash ide mode:  %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
+    Serial.printf("Flash ID %08X\n", ESP.getFlashChipId());
+    Serial.printf("Flash size %u bytes\n", realSize);
+    Serial.printf("Flash ide size %u bytes\n", ideSize);
+    Serial.printf("Flash ide speed %u Hz\n", ESP.getFlashChipSpeed());
+    Serial.printf("Flash ide mode %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
     if (ideSize != realSize) 
     {
@@ -72,9 +72,12 @@ void Application::setup(void)
     File file;
     String config_json, default_config = "{\"mqtt\":{\"hostname\":\"petitmaison.duckdns.org\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"}}";
 
+    Serial.printf("Application setup\n");
+
     StorageModule * storage = (StorageModule *) this->getModule("storage");
 
-    sprintf(filename, "/%s_configuration.json", this->_id);
+    sprintf(filename, "/configuration.json");
+    Serial.printf("Reading configuration file %s\n", filename);
     config_json = storage->read(filename);
     
     if(config_json.equals(""))
@@ -125,7 +128,7 @@ void Application::setup(void)
     config_json = "";
     modules_configuration.printTo(config_json);
     storage->write(filename, config_json.c_str());
-    Serial.printf("Setup modules...\n");
+    Serial.printf("Initialize modules...\n");
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
         Module * module = this->_modules[c];
@@ -136,7 +139,23 @@ void Application::setup(void)
             delay(100);
         }
     }
+
     Serial.printf("Modules initialized\n");
+    
+    String hostname = ((DeviceModule *)this->getModule("device"))->_hostname;
+    
+    if (WiFi.getMode() == WIFI_STA)
+    {
+        Serial.printf("#########################\n");
+        Serial.printf("### Device hostname %s.local and IP address %s ###\n", hostname.c_str(), WiFi.localIP().toString().c_str());
+        Serial.printf("#########################\n");
+    }
+    else
+    {
+        Serial.printf("#########################\n");
+        Serial.printf("### AP Ready %s.local and IP address %s ###\n", hostname.c_str(), WiFi.localIP().toString().c_str());
+        Serial.printf("#########################\n");
+    }
 }
 
 void Application::loop(void)

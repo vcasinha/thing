@@ -1,6 +1,7 @@
 #ifndef DEVICE_MODULE_H
     #define DEVICE_MODULE_H
 
+    #define FW_VERSION "0.0"
     #include <Arduino.h>
     
     #include <ESP8266httpUpdate.h>
@@ -69,20 +70,20 @@
             bool update(String filename)
             {
                 bool status = false;
-                String url = "https://petitmaison.duckdns.org:8123/local/";
                 String uri = "/local/";
-                String fingerprint = "9E 13 A5 BF 39 B4 18 B4 AE BF 8F 87 B6 87 90 D6 EE AF 44 FB";
-                const uint8_t httpsFingerprint[20] = {0x9E, 0x13, 0xA5, 0xBF, 0x39, 0xB4, 0x18, 0xB4, 0xAE, 0xBF, 0x8F, 0x87, 0xB6, 0x87, 0x90, 0xD6, 0xEE, 0xAF, 0x44, 0xFB};
+        
+                const uint8_t fingerprint[20] = {0x9E, 0x13, 0xA5, 0xBF, 0x39, 0xB4, 0x18, 0xB4, 0xAE, 0xBF, 0x8F, 0x87, 0xB6, 0x87, 0x90, 0xD6, 0xEE, 0xAF, 0x44, 0xFB};
                 //String fingerprint = "9E:13:A5:BF:39:B4:18:B4:AE:BF:8F:87:B6:87:90:D6:EE:AF:44:FB";
                 uri.concat(filename);
-                url.concat(filename);
-
-                Serial.printf("Requesting update file from %s\n", url.c_str());
-                ESPhttpUpdate.rebootOnUpdate(true);
+                String hostname = "petitmaison.duckdns.org";
+                unsigned int port = 8123;
+                Serial.printf("Requesting update file from https://%s:%d%s\n", hostname.c_str(), port, uri.c_str());
+                
+                ESPhttpUpdate.rebootOnUpdate(false);
                 delay(500);
 
                 //t_httpUpdate_return ret = ESPhttpUpdate.update(url, "", fingerprint);
-                t_httpUpdate_return ret = ESPhttpUpdate.update("petitmaison.duckdns.org", 8123, uri, "", fingerprint);
+                t_httpUpdate_return ret = ESPhttpUpdate.update(hostname, port, uri, "", fingerprint);
                 switch (ret)
                 {
                     case HTTP_UPDATE_FAILED:
@@ -112,58 +113,46 @@
 
             void checkForUpdates()
             {
-                //     String fwUrlBase = "http://google.com";
+                String mac = WiFi.macAddress();
+                String fwUrlBase = "https://petitmaison.duckdns.org:8123";
+                String fwVersionURL = "/local/firmware_version";
+                String fwFilename = "firmware.wemos.bin";
 
-                //     Serial.println("Checking for firmware updates.");
-                //     Serial.print("MAC address: ");
-                //     Serial.println(mac);
-                //     Serial.print("Firmware version URL: ");
-                //     Serial.println(fwVersionURL);
+                Serial.println("Checking for firmware updates.");
+                Serial.print("MAC address: ");
+                Serial.println(mac);
+                Serial.print("Firmware version URL: ");
+                Serial.println(fwVersionURL);
 
-                //     HTTPClient httpClient;
-                //     httpClient.begin(fwVersionURL);
-                //     int httpCode = httpClient.GET();
-                //     if (httpCode == 200)
-                //     {
-                //         String newFWVersion = httpClient.getString();
+                HTTPClient httpClient;
+                httpClient.begin(fwVersionURL);
+                int httpCode = httpClient.GET();
+                if (httpCode == 200)
+                {
+                    String newFWVersion = httpClient.getString();
 
-                //         Serial.print("Current firmware version: ");
-                //         Serial.println(FW_VERSION);
-                //         Serial.print("Available firmware version: ");
-                //         Serial.println(newFWVersion);
+                    Serial.print("Current firmware version: ");
+                    Serial.println(FW_VERSION);
+                    Serial.print("Available firmware version: ");
+                    Serial.println(newFWVersion);
 
-                //         int newVersion = newFWVersion.toInt();
-
-                //         if (newVersion > FW_VERSION)
-                //         {
-                //             Serial.println("Preparing to update");
-
-                //             String fwImageURL = fwURL;
-                //             fwImageURL.concat(".bin");
-                //             t_httpUpdate_return ret = ESPhttpUpdate.update(fwImageURL);
-
-                //             switch (ret)
-                //             {
-                //             case HTTP_UPDATE_FAILED:
-                //                 Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-                //                 break;
-
-                //             case HTTP_UPDATE_NO_UPDATES:
-                //                 Serial.println("HTTP_UPDATE_NO_UPDATES");
-                //                 break;
-                //             }
-                //         }
-                //         else
-                //         {
-                //             Serial.println("Already on latest version");
-                //         }
-                //     }
-                //     else
-                //     {
-                //         Serial.print("Firmware version check failed, got HTTP response code ");
-                //         Serial.println(httpCode);
-                //     }
-                //     httpClient.end();
+                    if (newFWVersion.toInt() > String(FW_VERSION).toInt())
+                    {
+                        Serial.println("Preparing to update");
+                        this->update(fwFilename);
+                    }
+                    else
+                    {
+                        Serial.println("Already on latest version");
+                    }
+                }
+                else
+                {
+                    Serial.print("Firmware version check failed, got HTTP response code ");
+                    Serial.println(httpCode);
+                    Serial.println(httpClient.getString());
+                }
+                httpClient.end();
             }
     };
 
