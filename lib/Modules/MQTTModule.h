@@ -7,7 +7,7 @@
     #include "WiFiModule.h"
     #include "Module.h"
 
-    class MQTTModule : public Module 
+    class MQTTModule : public Module
     {
         public:
             WiFiClient _wifiClient;
@@ -42,6 +42,13 @@
                 this->_wifiModule = (WiFiModule *) this->_application->getModule("wifi");
                 this->_deviceModule = (DeviceModule * ) this->_application->getModule("device");
 
+                if(config.size() == 0)
+                {
+                    Serial.printf("(MQTT) Disable module, missing configuration\n");
+                    this->disable();
+                    return;
+                }
+
                 strcpy(this->_hostname, config["hostname"] | "");
                 strcpy(this->_username, config["username"] | "");
                 strcpy(this->_password, config["password"] | "");
@@ -52,10 +59,14 @@
 
             virtual void setup(void)
             {
-                this->_client->setCallback([this] (char * topic, unsigned char * payload, unsigned int length) { this->callback(topic, payload, length); });
+                Serial.printf("(MQTT) ** Register base callback\n");
+                this->_client->setCallback([this](char *topic, unsigned char *payload, unsigned int length) {
+                    Serial.printf("(MQTT) ** Base callback\n");
+                    this->callback(topic, payload, length);
+                });
                 this->connect();
             }
-            
+
             virtual void loop(void)
             {
                 if(WiFi.getMode() == WIFI_AP)
@@ -123,6 +134,7 @@
                 Serial.printf("(MQTTModule) topic %s\n", topic);
                 for(unsigned int c = 0;c < _callbacks.size();c++)
                 {
+                    Serial.printf("(MQTTModule) Module %s loop\n", this->_callbacks[c]->_name);
                     this->_callbacks[c]->callback(topic, payload, length);
                 }
             }
@@ -131,6 +143,12 @@
             {
                 Serial.printf("Publish on %s payload: %s\n", topic, payload);
                 this->_client->publish(topic, payload);
+            }
+
+            void publish(const char *topic, const char *payload, unsigned int length)
+            {
+                Serial.printf("Publish on %s payload: %s\n", topic, payload);
+                this->_client->publish(topic, payload, length);
             }
 
             void publishState(const char *device_type, const char * location, const char * device_class, const char *payload)

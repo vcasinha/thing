@@ -11,7 +11,7 @@
             String _id;
             String _location;
             String _type;
-            
+
             unsigned int _update_period = 5;
             unsigned int _last_update = 0;
 
@@ -60,7 +60,7 @@
                 }
             }
 
-            void boot(JsonObject & config) 
+            void boot(JsonObject & config)
             {
                 this->_id = config["id"].as<String>();
                 this->_location = config["location"].as<String>();

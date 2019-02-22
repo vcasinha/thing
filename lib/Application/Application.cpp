@@ -4,7 +4,8 @@
 #include "Application.h"
 #include "StorageModule.h"
 #include "StorageModule.h"
-#include "WiFiModule.h"
+#include "RFModule.h"
+#include "PersWiFiManager.h"
 #include "MQTTModule.h"
 #include "DeviceModule.h"
 #include "ServerModule.h"
@@ -13,7 +14,7 @@
 Application::Application(const char * id)
 {
     this->_id = id;
-    Serial.printf("Booting applicatioin '%s'\n", this->_id);
+    Serial.printf("Booting application '%s'\n", this->_id);
     uint32_t realSize = ESP.getFlashChipRealSize();
     uint32_t ideSize = ESP.getFlashChipSize();
     FlashMode_t ideMode = ESP.getFlashChipMode();
@@ -24,11 +25,11 @@ Application::Application(const char * id)
     Serial.printf("Flash ide speed %u Hz\n", ESP.getFlashChipSpeed());
     Serial.printf("Flash ide mode %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
-    if (ideSize != realSize) 
+    if (ideSize != realSize)
     {
         Serial.println("Flash Chip configuration wrong!\n");
-    } 
-    else 
+    }
+    else
     {
         Serial.println("Flash Chip configuration ok.\n");
     }
@@ -40,6 +41,7 @@ Application::Application(const char * id)
     this->loadModule(new MQTTModule());
     this->loadModule(new StorageModule());
     this->loadModule(new ServerModule());
+    this->loadModule(new RFModule());
     this->loadModule(new DeviceManagerModule());
 }
 
@@ -79,7 +81,6 @@ void Application::setup(void)
     sprintf(filename, "/configuration.json");
     Serial.printf("Reading configuration file %s\n", filename);
     config_json = storage->read(filename);
-    
     if(config_json.equals(""))
     {
         Serial.printf("Using default configuration\n");
@@ -114,7 +115,6 @@ void Application::setup(void)
         {
             module_config.prettyPrintTo(Serial);
             Serial.printf("\n");
-            
             //Boot module
             module->boot(module_config);
         }
@@ -138,23 +138,27 @@ void Application::setup(void)
             module->setup();
             delay(100);
         }
+        else
+        {
+            Serial.printf("* Module disabled '%s' * \n", module->_name);
+        }
     }
 
     Serial.printf("Modules initialized\n");
-    
+
     String hostname = ((DeviceModule *)this->getModule("device"))->_hostname;
-    
+
     if (WiFi.getMode() == WIFI_STA)
     {
         Serial.printf("#########################\n");
         Serial.printf("### Device hostname %s.local and IP address %s ###\n", hostname.c_str(), WiFi.localIP().toString().c_str());
-        Serial.printf("#########################\n");
+        Serial.printf("#########################\n\n\n");
     }
     else
     {
         Serial.printf("#########################\n");
         Serial.printf("### AP Ready %s.local and IP address %s ###\n", hostname.c_str(), WiFi.localIP().toString().c_str());
-        Serial.printf("#########################\n");
+        Serial.printf("#########################\n\n\n");
     }
 }
 
@@ -163,7 +167,7 @@ void Application::loop(void)
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
         Module * module = (Module *) this->_modules[c];
-        
+
         if(module->_enabled == true)
         {
             unsigned long current_time = millis() + module->_loop_period_ms;

@@ -1,3 +1,4 @@
+
 #ifndef SERVER_MODULE_H
 #define SERVER_MODULE_H
 
@@ -6,7 +7,7 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-#include <PersWiFiManager.h>
+#include "PersWiFiManager.h"
 #include <DNSServer.h>
 #include <FS.h>
 
@@ -15,14 +16,13 @@
 #include "StorageModule.h"
 #include "DeviceModule.h"
 
-#define WIFI_HTM_PROGMEM
-
 class ServerModule : public Module
 {
   public:
-    DeviceModule * _deviceModule;
-    StorageModule * _storageModule;
-    ESP8266WebServer * _webServer;
+    const char *_refreshHTML = "<script>window.location='/'</script><a href='/'>redirecting...</a>";
+    DeviceModule *_deviceModule;
+    StorageModule *_storageModule;
+    ESP8266WebServer *_webServer;
     DNSServer *_nameServer;
     PersWiFiManager *_wifiManager;
     ServerModule()
@@ -122,7 +122,7 @@ class ServerModule : public Module
                 return;
             }
 
-            this->_webServer->send(500, "application/json", "{\"_status\":\"OK\"}");
+            this->_webServer->send(200, "application/json", "{\"_status\":\"OK\"}");
         });
 
         this->_webServer->on("/list", HTTP_GET, [this]() {
@@ -167,6 +167,14 @@ class ServerModule : public Module
             json += "}";
             this->_webServer->send(200, "application/json", json);
             json = String();
+        });
+
+        this->_webServer->onNotFound([this]() {
+            String uri = this->_webServer->uri();
+
+            Serial.printf("Path not found %s", uri.c_str());
+            this->_webServer->sendHeader("Cache-Control", " max-age=172800");
+            this->_webServer->send(302, "text/html", this->_refreshHTML);
         });
 
         this->_webServer->begin();
