@@ -51,14 +51,14 @@ class ServerModule : public Module
         this->_wifiManager->begin();
 
         this->_webServer->on("/restart", HTTP_GET, [this]() {
-            Serial.printf("Restart requested\n");
+            Serial.printf("(Server) Restart requested\n");
             this->_webServer->send(200, "application/json", "{\"_status\":\"Restarting\"}");
             this->_webServer->handleClient();
             this->_deviceModule->restart();
         });
 
         this->_webServer->on("/update", HTTP_GET, [this]() {
-            Serial.printf("Update requested\n");
+            Serial.printf("(Server) Update requested\n");
             if (!this->_webServer->hasArg("filename"))
             {
                 this->_webServer->send(500, "application/json", "{\"_status\":\"filename argument is missing\"}");
@@ -85,10 +85,10 @@ class ServerModule : public Module
             }
 
             String path = this->_webServer->arg("path");
-            Serial.printf("** Read file '%s'\n", path.c_str());
+            Serial.printf("(Server) ** Read file '%s'\n", path.c_str());
             if (this->_storageModule->exists(path.c_str()) == false)
             {
-                Serial.printf("** File not found '%s'\n", path.c_str());
+                Serial.printf("(Server) ** File not found '%s'\n", path.c_str());
                 this->_webServer->send(400, "application/json", "{\"_status\":\"File does not exist\"}");
                 return;
             }
@@ -114,7 +114,7 @@ class ServerModule : public Module
             }
             String body = this->_webServer->arg("plain");
             String path = this->_webServer->arg("path");
-            Serial.printf("** Write file '%s'\n", path.c_str());
+            Serial.printf("(Server) ** Write file '%s'\n", path.c_str());
 
             if (this->_storageModule->write(path.c_str(), body.c_str()) == false)
             {
@@ -133,7 +133,7 @@ class ServerModule : public Module
             }
 
             String path = this->_webServer->arg("path");
-            Serial.println("handleFileList: " + path);
+            Serial.println("(Server) handleFileList: " + path);
 
             Dir dir = this->_storageModule->opendir(path.c_str());
             path = String();
@@ -169,10 +169,18 @@ class ServerModule : public Module
             json = String();
         });
 
+        this->_webServer->on("/", HTTP_GET, [this]() {
+            String uri = this->_webServer->uri();
+            String output = "Frontpage";
+
+            Serial.printf("(Server) Serving %s \n", uri.c_str());
+            this->_webServer->send(200, "text/html", output);
+        });
+
         this->_webServer->onNotFound([this]() {
             String uri = this->_webServer->uri();
 
-            Serial.printf("Path not found %s", uri.c_str());
+            Serial.printf("(Server) Path not found %s \n", uri.c_str());
             this->_webServer->sendHeader("Cache-Control", " max-age=172800");
             this->_webServer->send(302, "text/html", this->_refreshHTML);
         });

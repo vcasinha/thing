@@ -68,7 +68,7 @@
                 this->_update_period = config["period"].as<int>() | this->_update_period;
                 this->config(config);
 
-                Serial.printf("(DEVICE.boot) Booting as %s@%s (%s)\n", this->_id.c_str(), this->_location.c_str(), this->_type.c_str());
+                Serial.printf("(DEVICE) Booting as %s@%s (%s)\n", this->_id.c_str(), this->_location.c_str(), this->_type.c_str());
             }
 
             virtual void onCommand(String) {}

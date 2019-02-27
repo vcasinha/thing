@@ -41,7 +41,7 @@ class DHTDevice : public Device
         {
             case DHTLIB_OK:
                 // DISPLAY DATA
-                Serial.printf("Humidity %.2f%% Temperature %.2fº\n", this->_humidity, this->_temperature);
+                //Serial.printf("Humidity %.2f%% Temperature %.2fº\n", this->_humidity, this->_temperature);
                 json["temperature"] = this->_temperature;
                 json["humidity"] = this->_humidity;
                 json.printTo(state);

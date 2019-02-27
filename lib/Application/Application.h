@@ -13,7 +13,7 @@
         public:
             PubSubClient _client;
             const char * _id;
-            
+
             Application(const char * id);
 
             Module * getModule(const char * name);
@@ -22,6 +22,5 @@
             void loadModule(Module * module);
         private:
             Vector<Module *> _modules;
-            
     };
 #endif
