@@ -93,16 +93,17 @@
             {
                 if (WiFi.status() == WL_CONNECTED && this->_client->connected() == false)
                 {
-                    Serial.printf("(MQTT) Connect %s as '%s' : '%s' attempt %d\n", this->_hostname, this->_username, this->_password, this->_connectionCount);
+                    this->_counter = 0;
+                    Serial.printf("(MQTT) Connect to %s as '%s':'%s' attempt %d\n", this->_hostname, this->_username, this->_password, this->_connectionCount);
                     while (this->_client->connected() == false)
                     {
-                        Serial.printf("(MQTT) ** Attempt %d of 5\n", this->_counter++);
+                        Serial.printf("(MQTT) ** Attempt %d of 5\n", ++this->_counter);
                         this->_client->connect(this->_deviceModule->_hostname.c_str(), this->_username, this->_password);
                         if (this->_client->connected() == false)
                         {
                             this->_connectionCount++;
                             this->_counter++;
-                            Serial.printf("(MQTT) ** Not able to connect to MQTT\n");
+                            Serial.printf("(MQTT) ** Not able to connect to server\n");
                             if (this->_counter >= 5)
                             {
                                 this->_counter = 0;
@@ -114,10 +115,11 @@
                         }
                         else
                         {
-                            Serial.printf("(MQTT) Refresh subscriptions\n");
+                            Serial.printf("(MQTT) Refresh\n");
                             for(unsigned int i = 0;i < this->_subscriptions.size();i++)
                             {
                                 const char *topic = this->_subscriptions[i]->c_str();
+                                Serial.printf("(MQTT) * Refresh topic '%s'\n", topic);
                                 this->_client->unsubscribe(topic);
                                 this->_client->subscribe(topic);
                             }
@@ -134,10 +136,10 @@
 
             void callback(char * topic, unsigned char * payload, unsigned int length)
             {
-                Serial.printf("(MQTT) topic %s\n", topic);
+                Serial.printf("(MQTT) topic '%s'\n", topic);
                 for(unsigned int c = 0;c < _callbacks.size();c++)
                 {
-                    Serial.printf("(MQTT) Module %s loop\n", this->_callbacks[c]->_name);
+                    Serial.printf("(MQTT) * Module '%s' callbacks\n", this->_callbacks[c]->_name);
                     this->_callbacks[c]->callback(topic, payload, length);
                 }
             }
@@ -150,7 +152,7 @@
 
             void publish(const char *topic, const char *payload, unsigned int length)
             {
-                Serial.printf("(MQTT) Publish on %s payload: %s\n", topic, payload);
+                Serial.printf("(MQTT) Publish on '%s' payload %s\n", topic, payload);
                 this->_client->publish(topic, payload, length);
             }
 
@@ -168,7 +170,7 @@
 
             void subscribe(const char * topic)
             {
-                Serial.printf("(MQTT) Subscribe %s\n", topic);
+                Serial.printf("(MQTT) Subscribe '%s' topic\n", topic);
                 this->_client->subscribe(topic);
                 this->_subscriptions.push(new String(topic));
             }

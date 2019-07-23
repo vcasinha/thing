@@ -160,6 +160,38 @@ void Application::setup(void)
     }
 }
 
+void Application::updateConfiguration(const char *config_json)
+{
+    DynamicJsonBuffer buffer;
+    JsonObject &modules_configuration = buffer.parseObject(config_json);
+    for (unsigned int i = 0; i < this->_modules.size(); i++)
+    {
+        //Module * module = this->getModule(name);
+        Module * module = this->_modules[i];
+        if (module == NULL)
+        {
+            continue;
+        }
+
+        JsonObject &module_config = modules_configuration[module->_name];
+        bool disabled = false;
+        if (module_config.containsKey("disable"))
+        {
+            disabled = module_config["disable"];
+        }
+
+        if (disabled == false)
+        {
+            module->config(module_config);
+        }
+        else
+        {
+            Serial.printf("(Application) * Module '%s' disabled\n", module->_name);
+            module->_enabled = false;
+        }
+    }
+}
+
 void Application::loop(void)
 {
     for(unsigned int c = 0;c < this->_modules.size();c++)

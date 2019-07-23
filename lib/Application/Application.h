@@ -20,6 +20,8 @@
             void setup(void);
             void loop(void);
             void loadModule(Module * module);
+            void updateConfiguration(const char *config_json);
+
         private:
             Vector<Module *> _modules;
     };

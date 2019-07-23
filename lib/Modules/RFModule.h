@@ -37,17 +37,12 @@ class RFModule : public Module
 
             this->_rx_pin = config["receive_pin"] | 0;
             this->_tx_pin = config["transmit_pin"] | 0;
-
-            Serial.printf("(RF) Receive pin: %d Transmit pin: %d\n", this->_rx_pin, this->_tx_pin);
-        }
-
-        virtual void setup(void)
-        {
             this->_mqtt->subscribe("home/switch/rf/command");
             this->_driver.enableTransmit(this->_tx_pin);
             this->_driver.enableReceive(this->_rx_pin);
+            Serial.printf("(RF) Receive pin: %d Transmit pin: %d\n", this->_rx_pin, this->_tx_pin);
         }
-
+        
         virtual void loop(void)
         {
             if (this->_driver.available())

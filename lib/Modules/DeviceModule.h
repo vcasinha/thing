@@ -31,36 +31,37 @@ class DeviceModule : public Module
     {
         this->_hostname = config["name"] | this->_boardID.c_str();
         this->_location = config["location"] | "somewhere";
+
         ArduinoOTA.onStart([this]() {
-            Serial.println("Inicio...");
+            Serial.println("(Device) OTA begin");
         });
 
         ArduinoOTA.onEnd([this]() {
-            Serial.println("nFim!");
+            Serial.println("(Device) OTA complete!");
         });
 
         ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
-            Serial.printf("Progresso: %u%%r", (progress / (total / 100)));
+            Serial.printf("(Device) OTA Progress: %u%%r", (progress / (total / 100)));
         });
 
         ArduinoOTA.onError([this](ota_error_t error) {
             Serial.printf("Erro [%u]: ", error);
             if (error == OTA_AUTH_ERROR)
-                Serial.println("Autenticacao Falhou");
+                Serial.println("(Device) OTA Authentication failed");
             else if (error == OTA_BEGIN_ERROR)
-                Serial.println("Falha no Inicio");
+                Serial.println("(Device) OTA Failed to start");
             else if (error == OTA_CONNECT_ERROR)
-                Serial.println("Falha na Conexao");
+                Serial.println("(Device) OTA Connection error");
             else if (error == OTA_RECEIVE_ERROR)
-                Serial.println("Falha na Recepcao");
+                Serial.println("(Device) OTA Receive error");
             else if (error == OTA_END_ERROR)
-                Serial.println("Falha no Fim");
+                Serial.println("(Device) OTA Failed to finish");
         });
         //ArduinoOTA.setPort(8266);
         //ArduinoOTA.setHostname(this->_hostname);
         //ArduinoOTA.setPassword((const char *)"123");
-
-        ArduinoOTA.begin();
+        Serial.printf("(Device) OTA Initialize\n");
+            ArduinoOTA.begin();
     }
 
     virtual void loop(void)
@@ -78,7 +79,7 @@ class DeviceModule : public Module
         uri.concat(filename);
         String hostname = "petitmaison.duckdns.org";
         unsigned int port = 8123;
-        Serial.printf("Requesting update file from https://%s:%d%s\n", hostname.c_str(), port, uri.c_str());
+        Serial.printf("(Device) Update from https://%s:%d%s\n", hostname.c_str(), port, uri.c_str());
 
         ESPhttpUpdate.rebootOnUpdate(false);
         delay(500);
@@ -87,28 +88,34 @@ class DeviceModule : public Module
         switch (ret)
         {
         case HTTP_UPDATE_FAILED:
-            Serial.printf("Update Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+            Serial.printf("(Device) Update Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
             break;
 
         case HTTP_UPDATE_NO_UPDATES:
-            Serial.println("Update ignored");
+            Serial.println("(Device) Update ignored");
             break;
 
         case HTTP_UPDATE_OK:
             status = true;
-            Serial.println("HTTP update done");
+            Serial.println("(Device) HTTP update done");
             break;
         }
 
         return status;
     }
 
+    void eraseWiFiSettings()
+    {
+        Serial.printf("(Device) Erasing configuration.\n");
+        ESP.eraseConfig();
+        this->restart();
+    }
+
     void restart()
     {
-        Serial.printf("Restarting...\n");
-        delay(1000);
+        Serial.printf("(Device) Restarting.\n");
         ESP.restart();
-        delay(5000);
+        delay(2000);
     }
 
     void checkForUpdates()
@@ -118,10 +125,10 @@ class DeviceModule : public Module
         String fwVersionURL = "/local/firmware_version";
         String fwFilename = "firmware.wemos.bin";
 
-        Serial.println("Checking for firmware updates.");
-        Serial.print("MAC address: ");
+        Serial.println("(Device) Checking for firmware updates.");
+        Serial.print("(Device) MAC address: ");
         Serial.println(mac);
-        Serial.print("Firmware version URL: ");
+        Serial.print("(Device) Firmware version URL: ");
         Serial.println(fwVersionURL);
 
         HTTPClient httpClient;
@@ -131,24 +138,24 @@ class DeviceModule : public Module
         {
             String newFWVersion = httpClient.getString();
 
-            Serial.print("Current firmware version: ");
+            Serial.print("(Device) Current firmware version: ");
             Serial.println(FW_VERSION);
-            Serial.print("Available firmware version: ");
+            Serial.print("(Device) Available firmware version: ");
             Serial.println(newFWVersion);
 
             if (newFWVersion.toInt() > String(FW_VERSION).toInt())
             {
-                Serial.println("Preparing to update");
+                Serial.println("(Device) Preparing to update");
                 this->update(fwFilename);
             }
             else
             {
-                Serial.println("Already on latest version");
+                Serial.println("(Device) Already on latest version");
             }
         }
         else
         {
-            Serial.print("Firmware version check failed, got HTTP response code ");
+            Serial.print("(Device) Firmware version check failed, got HTTP response code ");
             Serial.println(httpCode);
             Serial.println(httpClient.getString());
         }

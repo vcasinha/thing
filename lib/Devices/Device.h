@@ -6,14 +6,18 @@
 
     class Device
     {
+        protected:
+            unsigned int _updateFrequency = 1;
+
         public:
             MQTTModule * _mqtt;
             String _id;
             String _location;
             String _type;
+            bool _useFrequency = false;
 
-            unsigned int _update_period = 5;
-            unsigned int _last_update = 0;
+            unsigned int _lastUpdate = 0;
+            unsigned int _updatePeriod = 60;
 
             char _commandTopic[100];
             char _availabilityTopic[100];
@@ -23,6 +27,37 @@
             Device()
             {
                 this->_type = "device";
+            }
+
+            virtual ~Device()
+            {
+
+            }
+
+            void setFrenquency(unsigned int frequency)
+            {
+                if (this->_useFrequency)
+                {
+                    Serial.printf("(DEVICE) '%s' set frequency to %d\n", this->_id.c_str(), frequency);
+                    this->_updateFrequency = frequency;
+                    if (frequency == 0)
+                    {
+                        this->_updatePeriod = 0;
+                    }
+                    else
+                    {
+                        this->_updatePeriod = (1000 / frequency);
+                    }
+                }
+            }
+
+            void setPeriod(unsigned int period)
+            {
+                if (!this->_useFrequency)
+                {
+                    Serial.printf("(DEVICE) '%s' set period to %d\n", this->_id.c_str(), period);
+                    this->_updatePeriod = period * 1000;
+                }
             }
 
             void publish(const char *topic, const char *payload)
@@ -39,6 +74,14 @@
             {
                 this->_mqtt->publish(this->_availabilityTopic, payload);
             }
+
+            void setState(bool state)
+            {
+                this->_state = state;
+                Serial.printf("(Device) Update state on '%s' to '%s'\n", this->_id.c_str(), this->_state ? "ON" : "OFF");
+                this->publishState(this->_state ? "ON" : "OFF");
+            }
+
             void setMQTT(MQTTModule * mqtt)
             {
                 //Serial.printf("(DEVICE.setMQTT) %s (%s) on %s\n", this->_id.c_str(), this->_type.c_str(), this->_location.c_str());
@@ -63,16 +106,36 @@
             void boot(JsonObject & config)
             {
                 this->_id = config["id"].as<String>();
-                this->_location = config["location"].as<String>();
                 this->_state = config["state"].as<bool>() | false;
-                this->_update_period = config["period"].as<int>() | this->_update_period;
+                this->setPeriod(this->_updatePeriod);
                 this->config(config);
 
                 Serial.printf("(DEVICE) Booting as %s@%s (%s)\n", this->_id.c_str(), this->_location.c_str(), this->_type.c_str());
             }
 
+            virtual void config(JsonObject &config)
+            {
+                this->_location = config["location"].as<String>();
+                if(config.containsKey("use_frequency"))
+                {
+                    this->_useFrequency = config["use_frequency"].as<bool>();
+                }
+
+                if(config.containsKey("frequency"))
+                {
+                    this->setFrenquency(config["frequency"].as<int>());
+                }
+
+                if(config.containsKey("period"))
+                {
+                    this->setPeriod(config["period"].as<int>());
+                }
+
+                this->deviceConfig(config);
+            }
+
             virtual void onCommand(String) {}
-            virtual void config(JsonObject &config) {}
+            virtual void deviceConfig(JsonObject & config) {}
             virtual void setup() {}
             virtual void loop() {}
     };

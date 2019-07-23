@@ -23,8 +23,10 @@
             }
 
             virtual void boot(JsonObject &) {};
+            virtual void config(JsonObject &){};
             virtual void setup() {};
             virtual void loop() {};
+            virtual String status() { return "Not implemented";};
             virtual void callback(char * topic, unsigned char * payload, unsigned int length) {};
             void disable(void) { this->_enabled = false; }
             void enable(void) { this->_enabled = true; }

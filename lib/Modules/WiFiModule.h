@@ -24,7 +24,6 @@ class WiFiModule : public Module
         void setup(void)
         {
         }
-        
     private:
 
 };

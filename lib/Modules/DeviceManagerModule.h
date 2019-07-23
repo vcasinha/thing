@@ -2,10 +2,10 @@
 #define DEVICEMANAGER_MODULE_H
 
 #include <Arduino.h>
-#include <WiFiManager.h>
 #include "DeviceFactory.h"
 #include "DHTFactory.h"
 #include "SwitchFactory.h"
+#include "BlinkFactory.h"
 #include "Module.h"
 #include "MQTTModule.h"
 #include "Vector.h"
@@ -23,10 +23,11 @@ class DeviceManagerModule : public Module
         DeviceManagerModule()
         {
             this->_name = "device_manager";
-            this->_loop_period_ms = 500;
+            this->_loop_period_ms = 20;
 
             this->addFactory(new DHTFactory());
             this->addFactory(new SwitchFactory());
+            this->addFactory(new BlinkFactory());
         }
 
         void addFactory(DeviceFactory *factory)
@@ -56,7 +57,7 @@ class DeviceManagerModule : public Module
                 {
                     Device *device = this->_factories[i]->makeDevice();
                     device->boot(config);
-                    this->loadDevice(device);
+                    this->_devices.push(device);
 
                     made = true;
                 }
@@ -68,6 +69,25 @@ class DeviceManagerModule : public Module
             }
         }
 
+        void config(JsonObject & config)
+        {
+            if (config["devices"])
+            {
+                for (unsigned int i = 0; i < this->_devices.size(); i++)
+                {
+                    Device * device = this->_devices[i];
+                    Serial.printf("(DeviceManager) Update device configuration '%s'\n", device->_id.c_str());
+                    if (config["devices"][device->_id])
+                    {
+                        JsonObject &device_config = config["devices"][device->_id];
+                        device_config.prettyPrintTo(Serial);
+                        Serial.print("\n");
+                        this->_devices[i]->config(device_config);
+                    }
+                }
+            }
+        }
+
         virtual void boot(JsonObject &config)
         {
             this->_mqtt = (MQTTModule *)this->_application->getModule("mqtt");
@@ -75,11 +95,12 @@ class DeviceManagerModule : public Module
 
             if (config["devices"])
             {
+                JsonObject &root = config["devices"];
                 Serial.printf("(DeviceManager) Booting %d devices\n", config["devices"].size());
-                for (unsigned int i = 0; i < config["devices"].size(); i++)
+                for (JsonObject::iterator it = root.begin();it!=root.end();++it)
                 {
                     //config.prettyPrintTo(Serial);
-                    this->makeDevice(config["devices"][i]);
+                    this->makeDevice(it->value);
                 }
             }
         }
@@ -93,16 +114,12 @@ class DeviceManagerModule : public Module
             }
         }
 
-        void loadDevice(Device *device)
-        {
-            this->_devices.push(device);
-        }
-
         void callback(char *topic, unsigned char *payload, unsigned int length)
         {
             String topic_string = topic;
             payload[length] = '\0';
             String data = (char *)payload;
+            data.trim();
 
             Serial.printf("(DeviceManager) Device callback on topic '%s' Data: %s\n", topic_string.c_str(), data.c_str());
             for (unsigned int i = 0; i < this->_devices.size(); i++)
@@ -118,10 +135,10 @@ class DeviceManagerModule : public Module
                 Device *device = this->_devices[i];
                 unsigned long current_time = millis();
 
-                if (device->_update_period == 0 || (current_time - device->_last_update) > (device->_update_period * 1000))
+                if (device->_updatePeriod == 0 || (current_time - device->_lastUpdate) > device->_updatePeriod)
                 {
                     device->loop();
-                    device->_last_update = current_time;
+                    device->_lastUpdate = current_time;
                 }
             }
         }

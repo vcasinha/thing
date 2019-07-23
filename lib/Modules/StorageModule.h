@@ -14,16 +14,17 @@
                 this->_name = "storage";
                 if (SPIFFS.begin() == false)
                 {
-                    Serial.printf("** Error initializing filesystem");
+                    Serial.printf("(Storage) ** Error initializing filesystem");
                 }
             }
 
             bool write(const char * filename, const char * module_data)
             {
+                Serial.printf("(Storage) Open file '%s'\n", filename);
                 File file = SPIFFS.open(filename, "w");
-                if (!file) 
+                if (!file)
                 {
-                    Serial.printf("Could not open file %s\n", filename);
+                    Serial.printf("(Storage) Could not open '%s'\n", filename);
                     return false;
                 }
 
@@ -37,6 +38,7 @@
 
             File getFile(const char * filename, const char * mode)
             {
+                Serial.printf("(Storage) Get file '%s'\n", filename);
                 return SPIFFS.open(filename, mode);
             }
 
@@ -54,6 +56,8 @@
             String read(const char * filename)
             {
                 String data;
+
+                Serial.printf("(Storage) Read file '%s'\n", filename);
                 File file = SPIFFS.open(filename, "r");
                 if(SPIFFS.exists(filename) == false || file == false)
                 {
@@ -62,7 +66,7 @@
                 else
                 {
                     File file = SPIFFS.open(filename, "r");
-                    if (!file) 
+                    if (!file)
                     {
                         Serial.printf("Could not open file %s\n", filename);
                     }
@@ -79,6 +83,7 @@
 
             Dir opendir(const char * path)
             {
+                Serial.printf("(Storage) Open folder '%s'\n", path);
                 return SPIFFS.openDir(path);
             }
     };
