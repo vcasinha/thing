@@ -1,169 +1,196 @@
 #include <Arduino.h>
+#include <ArduinoLog.h>
 #include <ArduinoJson.h>
 
 #include "Application.h"
-#include "StorageModule.h"
+#include "MQTTModule.h"
+#include "DeviceModule.h"
 #include "StorageModule.h"
 #include "RFModule.h"
 #include "PersWiFiManager.h"
-#include "MQTTModule.h"
-#include "DeviceModule.h"
 #include "ServerModule.h"
 #include "DeviceManagerModule.h"
 
 Application::Application(const char * id)
 {
     this->_id = id;
-    Serial.printf("(Application) Booting application '%s'\n", this->_id);
-    uint32_t realSize = ESP.getFlashChipRealSize();
-    uint32_t ideSize = ESP.getFlashChipSize();
-    FlashMode_t ideMode = ESP.getFlashChipMode();
+    Log.notice("(application.construct) Booting application '%s' ", this->_id);
 
-    Serial.printf("(Flash) ID %08X\n", ESP.getFlashChipId());
-    Serial.printf("(Flash) size %u bytes\n", realSize);
-    Serial.printf("(Flash) IDE size %u bytes\n", ideSize);
-    Serial.printf("(Flash) IDE speed %u Hz\n", ESP.getFlashChipSpeed());
-    Serial.printf("(Flash) IDE mode %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
+    Log.notice("(application.construct) Flash ID %08X", ESP.getFlashChipId());
+    uint32_t realSize = ESP.getFlashChipRealSize();
+    Log.notice("(application.construct) Flash size %u bytes", realSize);
+    uint32_t ideSize = ESP.getFlashChipSize();
+    Log.notice("(application.construct) Flash IDE size %u bytes", ideSize);
+    Log.notice("(application.construct) Flash IDE speed %u Hz", ESP.getFlashChipSpeed());
+    FlashMode_t ideMode = ESP.getFlashChipMode();
+    Log.notice("(application.construct) Flash IDE mode %s", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
     if (ideSize != realSize)
     {
-        Serial.println("(Application) Flash Chip configuration wrong!\n");
+        Log.notice("(application.construct) Flash Chip configuration wrong! ");
     }
     else
     {
-        Serial.println("(Application) Flash Chip configuration ok.\n");
+        Log.notice("(application.construct) Flash Chip configuration ok. ");
     }
 
-    delay(1000);
-    Serial.printf("(Application) Load system modules\n");
+    Log.notice("(application.construct) Load application modules ");
+
     this->loadModule(new DeviceModule());
-    this->loadModule(new WiFiModule());
-    this->loadModule(new MQTTModule());
     this->loadModule(new StorageModule());
+    this->loadModule(new MQTTModule());
+    this->loadModule(new WiFiModule());
     this->loadModule(new ServerModule());
-    this->loadModule(new RFModule());
     this->loadModule(new DeviceManagerModule());
+    this->loadModule(new RFModule());
 }
 
 void Application::loadModule(Module * module)
 {
-    Serial.printf("(Application) Load module %s\n", module->_name);
+    Log.notice("(application.loadModule) Loading %s ", module->_name);
     module->setApplication(this);
     this->_modules.push(module);
 }
 
 Module * Application::getModule(const char * name)
 {
-    //Serial.printf("Get module %s\n", name);
+    //Log.notice("Get module %s ", name);
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
-        Module * m = this->_modules[c];
-        if(strcmp(m->_name, name) == 0)
+        Module * module = this->_modules[c];
+        if (strcmp(module->_name, name) == 0)
         {
-            return m;
+            return module;
         }
     }
-    Serial.printf("(Application) Error module not found '%s' *****", name);
+
+    Log.error("(application.getModule) Module not found '%s' *****", name);
     abort();
 }
 
 void Application::setup(void)
 {
-    DynamicJsonBuffer buffer;
+    DynamicJsonDocument JSONDoc(1024);
     char filename[100];
     File file;
     String config_json, default_config = "{\"mqtt\":{\"hostname\":\"petitmaison.duckdns.org\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"}}";
 
-    Serial.printf("(Application) Setup start\n");
+    Log.notice("(application.setup) Setup start ");
 
     StorageModule * storage = (StorageModule *) this->getModule("storage");
 
     sprintf(filename, "/configuration.json");
-    Serial.printf("(Application) Reading configuration file %s\n", filename);
+    Log.notice("(application.setup) Reading configuration file %s ", filename);
     config_json = storage->read(filename);
+
+    //Log.notice("(application.) Configuration: %s ", config_json.c_str());
+
     if(config_json.equals(""))
     {
-        Serial.printf("(Application) Using default configuration\n");
+        Log.warning("(application.setup) Using default configuration ");
         config_json = default_config;
     }
-    //Serial.printf("Parsing JSON configuration. \n%s\n", config_json.c_str());
-    JsonObject & modules_configuration = buffer.parseObject(config_json.c_str());
-    if (!modules_configuration.success())
+
+    auto error = deserializeJson(JSONDoc, config_json);
+
+    if (error)
     {
-        Serial.printf("(Application) Failed to parse JSON configuration. \n%s\n", config_json.c_str());
+        Log.error("(application.setup) Failed to parse JSON configuration.  %s ", config_json.c_str());
+        Log.error(error.c_str());
         abort();
     }
 
-    Serial.printf("(Application) Boot modules...\n");
+    //Log.notice("(application.setup)### Configuration debug: ");
+    //serializeJson(JSONDoc, Serial);
+    //Log.notice("(application.setup)### END DEBUG ");
+
+    //JsonObject modules_configuration = JSONDoc.to<JsonObject>();
+
+    Log.notice("(application.setup) Boot modules... ");
     for(unsigned int i = 0;i < this->_modules.size();i++)
     {
         //Module * module = this->getModule(name);
         Module * module = this->_modules[i];
+        bool disabled = false;
         if(module == NULL)
         {
             continue;
         }
 
-        Serial.printf("(Application) Boot module %s\n", module->_name);
+        Log.trace("(application.setup) Boot module %s ", module->_name);
 
-        JsonObject &module_config = modules_configuration[module->_name];
-        bool disabled = module_config["disable"] | false;
-
-        module->_loop_period_ms = module_config["update_period"] | module->_loop_period_ms;
-
-        if (disabled == false)
+        if (JSONDoc.containsKey(module->_name) == false)
         {
-            module_config.prettyPrintTo(Serial);
-            Serial.printf("\n");
-            //Boot module
-            module->boot(module_config);
+            Log.warning("(application.setup) * Module '%s' configuration not found ", module->_name);
+        }
+
+        JsonVariant module_config = JSONDoc[module->_name];
+        if(module_config.isNull())
+        {
+            Log.warning("(application.setup) * Module '%s' configuration is empty ", module->_name);
         }
         else
         {
-            Serial.printf("(Application) * Module '%s' disabled\n", module->_name);
+            disabled = module_config["disable"] | false;
+            module->_loop_period_ms = module_config["update_period"] | module->_loop_period_ms;
+        }
+
+        if (disabled == false)
+        {
+            String json_config = "";
+            serializeJson(module_config.as<JsonObject>(), json_config);
+            Log.notice("(application.setup) * Booting module '%s' with (%s)", module->_name, json_config.c_str());
+            JsonObject json = module_config.as<JsonObject>();
+            module->boot(json);
+        }
+        else
+        {
+            Log.warning("(application.setup) * Module '%s' disabled ", module->_name);
             module->_enabled = false;
         }
     }
 
-    config_json = "";
-    modules_configuration.printTo(config_json);
-    storage->write(filename, config_json.c_str());
-    Serial.printf("(Application) Initialize modules...\n");
+    Log.notice("(application.setup) Initialize modules... ");
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
         Module * module = this->_modules[c];
         if(module->_enabled == true)
         {
-            Serial.printf("(Application) * Setting up module '%s' * \n", module->_name);
+            Log.notice("(application.setup) * Setting up module '%s' *  ", module->_name);
             module->setup();
             delay(100);
         }
         else
         {
-            Serial.printf("(Application) * Module disabled '%s' * \n", module->_name);
+            Log.warning("(application.setup) * Module disabled '%s' *  ", module->_name);
         }
     }
 
     String hostname = ((DeviceModule *)this->getModule("device"))->_hostname;
+    WiFi.hostname(hostname.c_str());
 
     if (WiFi.getMode() == WIFI_STA)
     {
-        Serial.printf("#########################\n");
-        Serial.printf("### Application URL http://%s.local (%s) ###\n", hostname.c_str(), WiFi.localIP().toString().c_str());
-        Serial.printf("#########################\n");
+        Log.notice("(application.setup) ###############################################");
+        Log.notice("(application.setup) ### Application URL http://%s.local (%s)", hostname.c_str(), WiFi.localIP().toString().c_str());
     }
     else
     {
-        Serial.printf("#########################\n");
-        Serial.printf("### AP Mode http://%s.local (%s) ###\n", hostname.c_str(), WiFi.localIP().toString().c_str());
-        Serial.printf("#########################\n");
+        Log.notice("(application.setup) ###############################################");
+        Log.notice("(application.setup) ### AP Mode http://%s.local (%s)", hostname.c_str(), WiFi.localIP().toString().c_str());
     }
 }
 
 void Application::updateConfiguration(const char *config_json)
 {
-    DynamicJsonBuffer buffer;
-    JsonObject &modules_configuration = buffer.parseObject(config_json);
+    DynamicJsonDocument JSONDoc(1024);
+    auto error = deserializeJson(JSONDoc, config_json);
+    if(error)
+    {
+        Log.notice("(app.updateConfiguration) Parse JSON error");
+        return;
+    }
+
     for (unsigned int i = 0; i < this->_modules.size(); i++)
     {
         //Module * module = this->getModule(name);
@@ -173,7 +200,7 @@ void Application::updateConfiguration(const char *config_json)
             continue;
         }
 
-        JsonObject &module_config = modules_configuration[module->_name];
+        JsonObject module_config = JSONDoc[module->_name];
         bool disabled = false;
         if (module_config.containsKey("disable"))
         {
@@ -186,7 +213,7 @@ void Application::updateConfiguration(const char *config_json)
         }
         else
         {
-            Serial.printf("(Application) * Module '%s' disabled\n", module->_name);
+            Log.notice("(application.updateConfiguration) * Module '%s' disabled ", module->_name);
             module->_enabled = false;
         }
     }
@@ -197,16 +224,16 @@ void Application::loop(void)
     for(unsigned int c = 0;c < this->_modules.size();c++)
     {
         Module * module = (Module *) this->_modules[c];
-
         if(module->_enabled == true)
         {
             unsigned long current_time = millis() + module->_loop_period_ms;
-
-            if (module->_loop_period_ms == 0 || (current_time - module->_loop_time) > module->_loop_period_ms)
+            unsigned long delta_time = (current_time - module->_loop_time);
+            //Only call module with desired frequency
+            if (module->_loop_period_ms == 0 || delta_time > module->_loop_period_ms)
             {
-                module->loop();
-                delay(10);
+                module->loop(delta_time);
                 module->_loop_time = current_time;
+                delay(1);
             }
         }
     }

@@ -3,6 +3,7 @@
 
     #include <Arduino.h>
     #include <PubSubClient.h>
+    #include <ESP8266WiFi.h>
     #include "Vector.h"
 
     #include "Module.h"
@@ -11,8 +12,10 @@
     class Application
     {
         public:
+            WiFiClient _wifiClient;
             PubSubClient _client;
             const char * _id;
+            String _hostname;
 
             Application(const char * id);
 

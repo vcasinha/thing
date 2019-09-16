@@ -5,6 +5,7 @@
 #define RFMQTT_TRISTATE 2
 
 #include <Arduino.h>
+#include <ArduinoLog.h>
 #include <ArduinoJson.h>
 #include <RCSwitch.h>
 #include "Module.h"
@@ -40,10 +41,10 @@ class RFModule : public Module
             this->_mqtt->subscribe("home/switch/rf/command");
             this->_driver.enableTransmit(this->_tx_pin);
             this->_driver.enableReceive(this->_rx_pin);
-            Serial.printf("(RF) Receive pin: %d Transmit pin: %d\n", this->_rx_pin, this->_tx_pin);
+            Log.notice("(RF.boot) Receive pin: %d Transmit pin: %d", this->_rx_pin, this->_tx_pin);
         }
-        
-        virtual void loop(void)
+
+        virtual void loop(unsigned long delta_time)
         {
             if (this->_driver.available())
             {
@@ -54,8 +55,8 @@ class RFModule : public Module
                 unsigned int protocol = this->_driver.getReceivedProtocol();
 
                 this->_driver.resetAvailable();
-                StaticJsonBuffer<200> jsonBuffer;
-                JsonObject &root = jsonBuffer.createObject();
+                StaticJsonDocument<256> jsonBuffer;
+                JsonObject root = jsonBuffer.to<JsonObject>();
 
                 const char *id = dec2binWzerofill(value, bit_length);
                 const char *tristate = bin2tristate(id);
@@ -63,11 +64,11 @@ class RFModule : public Module
 
                 if (strcmp(tristate, this->_value) == 0 && current < this->_lastTime + this->_delay)
                 {
-                    Serial.printf("(RF) Ignoring...\n");
+                    Log.notice("(RF.loop) Ignoring repetition...");
                     return;
                 }
 
-                Serial.printf("(RF) Received: %ld %s %s\n", value, id, tristate);
+                Log.notice("(RF.loop) Received: %ld %s %s", value, id, tristate);
 
                 root["element_id"] = this->_application->_id;
                 root["id"] = id;
@@ -79,7 +80,7 @@ class RFModule : public Module
                 char payload[512];
                 char topic[100];
 
-                root.printTo(payload);
+                serializeJson(root, payload);
                 sprintf(topic, "home/switch/rf/%.11s/state", tristate);
                 // if (id[23] == '0')
                 // {
@@ -104,23 +105,23 @@ class RFModule : public Module
             payload[length] = '\0';
             //topic[length] = '\0';
             String topic_string = String(topic);
-            Serial.printf("(RF) Bridge topic %s\n", topic_string.c_str());
+            Log.notice("(RF.callback) Bridge topic %s", topic_string.c_str());
             if (topic_string.startsWith("home/switch/rf/command"))
             {
-                //Serial.printf("RF Bridge code %s\n", topic_string.c_str());
+                //Serial.printf("RF Bridge code %s", topic_string.c_str());
 
-                Serial.printf("(RF) Code: %s\n", (char *)payload);
+                Log.notice("(RF.callback) Code: %s", (char *)payload);
                 switch (this->_format)
                 {
                 case RFMQTT_TRISTATE:
-                    Serial.printf("(RF) *  transmit Tristate %s\n", (char *)payload);
+                    Log.notice("(RF.callback) *  transmit Tristate %s", (char *)payload);
                     this->_driver.sendTriState((char *)payload);
                     // char tmp[100];
                     // sprintf(tmp, "home/switch/rf/%.11s/state", payload);
                     // this->_mqtt->publish(topic, (char *)payload, length);
                     break;
                 case RFMQTT_BINARY:
-                    Serial.printf("(RF) * transmit Binary %s\n", (char *)payload);
+                    Log.notice("(RF.callback) * transmit Binary %s", (char *)payload);
                     this->_driver.send((char *)payload);
                     break;
                 }

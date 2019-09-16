@@ -5,24 +5,42 @@
 #include "DeviceManagerModule.h"
 #include "DHTFactory.h"
 #include "SwitchFactory.h"
-//#include "RFModule.h"
+
 #include "user_settings.h"
 
 Application * app;
 
+void printTimestamp(Print *_logOutput)
+{
+    char c[12];
+    sprintf(c, "%10lu ", millis());
+    _logOutput->print(c);
+}
+
+void printNewline(Print *_logOutput)
+{
+    _logOutput->print('\n');
+}
+
 void setup()
 {
+    DeviceManagerModule * thingsManager;
+    //Initialize serial port output
     Serial.begin(serial_port_baud_rate);
-    //ESP.reset();
-    //Serial.setDebugOutput(true);
-    delay(5000);
-    Serial.printf("\n\n%s v%s\n\n", application_name, application_version);
+    Serial.print("\n\n");
+    //Log configuration
+    Log.begin(APP_LOG_LEVEL, &Serial, true);
+    Log.setPrefix(printTimestamp); // Uncomment to get timestamps as prefix
+    Log.setSuffix(printNewline); // Uncomment to get newline as suffix
+    //delay(5000);
+    delay(1000);
+    Log.notice("Booting %s v%s", application_name, application_version);
+    delay(3000);
     app = new Application(application_name);
     delay(1000);
-    //Serial.printf("Load modules\n");
-    //app->loadModule(new DHTLoader());
-    //app->loadModule(new RFModule());
-    //app->loadModule(new SwitchModule());
+    thingsManager = (DeviceManagerModule *)app->getModule("device_manager");
+    thingsManager->addFactory(new DHTFactory());
+    thingsManager->addFactory(new SwitchFactory());
     app->setup();
 }
 

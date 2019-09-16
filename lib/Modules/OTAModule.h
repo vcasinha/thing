@@ -8,7 +8,7 @@
     #include "Module.h"
     #include "WiFiModule.h"
 
-    class OTAModule : public Module 
+    class OTAModule : public Module
     {
         public:
             WiFiModule * _wifiModule;
@@ -49,9 +49,8 @@
                 this->_controller->begin();
                 this->_controller->setHostname(this->_hostname);
                 this->_controller->setPassword(this->_password);
-
             }
-            
+
             virtual void loop(void)
             {
                 this->_controller->handle();

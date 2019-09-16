@@ -1,90 +1,90 @@
 #ifndef CONFIGMODULE_H
-    #define CONFIGMODULE_H
-    #include <Arduino.h>
-    #include <ArduinoJson.h>
-    #include <FS.h>
+#define CONFIGMODULE_H
+#include <Arduino.h>
+#include <ArduinoLog.h>
+#include <ArduinoJson.h>
+#include <FS.h>
 
-    #include "Module.h"
+#include "Module.h"
 
-    class StorageModule: public Module 
-    {
-        public:
-            StorageModule()
+class StorageModule: public Module
+{
+    public:
+        StorageModule()
+        {
+            this->_name = "storage";
+            if (SPIFFS.begin() == false)
             {
-                this->_name = "storage";
-                if (SPIFFS.begin() == false)
-                {
-                    Serial.printf("(Storage) ** Error initializing filesystem");
-                }
+                Log.error("(storage.construct) ** Error initializing filesystem");
+            }
+        }
+
+        bool write(const char * filename, const char * module_data)
+        {
+            Log.trace("(storage.write) Open file '%s'", filename);
+            File file = SPIFFS.open(filename, "w");
+            if (!file)
+            {
+                Log.error("(storage.write) Could not open '%s'", filename);
+                return false;
             }
 
-            bool write(const char * filename, const char * module_data)
+            //Serial.printf("Writing on %s the following data:\n%s\n", filename, module_data);
+
+            file.println(module_data);
+            file.close();
+
+            return true;
+        }
+
+        File getFile(const char * filename, const char * mode)
+        {
+            Log.trace("(storage.getFile) Get file '%s'", filename);
+            return SPIFFS.open(filename, mode);
+        }
+
+        bool exists(const char * filename)
+        {
+            if (SPIFFS.exists(filename) == false)
             {
-                Serial.printf("(Storage) Open file '%s'\n", filename);
-                File file = SPIFFS.open(filename, "w");
+                return false;
+            }
+
+            return true;
+        }
+
+        String read(const char * filename)
+        {
+            String data;
+
+            Log.trace("(storage.read) Read file '%s'", filename);
+            File file = SPIFFS.open(filename, "r");
+            if(SPIFFS.exists(filename) == false || file == false)
+            {
+                Log.error("(storage.read) File does not exist %s", filename);
+            }
+            else
+            {
+                File file = SPIFFS.open(filename, "r");
                 if (!file)
                 {
-                    Serial.printf("(Storage) Could not open '%s'\n", filename);
-                    return false;
-                }
-
-                //Serial.printf("Writing on %s the following data:\n%s\n", filename, module_data);
-
-                file.println(module_data);
-                file.close();
-
-                return true;
-            }
-
-            File getFile(const char * filename, const char * mode)
-            {
-                Serial.printf("(Storage) Get file '%s'\n", filename);
-                return SPIFFS.open(filename, mode);
-            }
-
-            bool exists(const char * filename)
-            {
-                if (SPIFFS.exists(filename) == false)
-                {
-                    Serial.printf("File does not exist %s\n", filename);
-                    return false;
-                }
-
-                return true;
-            }
-
-            String read(const char * filename)
-            {
-                String data;
-
-                Serial.printf("(Storage) Read file '%s'\n", filename);
-                File file = SPIFFS.open(filename, "r");
-                if(SPIFFS.exists(filename) == false || file == false)
-                {
-                    Serial.printf("File does not exist %s\n", filename);
+                    Log.error("(storage.read) Could not open file %s", filename);
                 }
                 else
                 {
-                    File file = SPIFFS.open(filename, "r");
-                    if (!file)
-                    {
-                        Serial.printf("Could not open file %s\n", filename);
-                    }
-                    else
-                    {
-                        data = file.readString();
-                        file.close();
-                    }
+                    data = file.readString();
+                    file.close();
                 }
-                //Serial.printf("Read from %s the following data:\n%s\n", filename, data.c_str());
-
-                return data;
             }
+            //Serial.printf("Read from %s the following data:\n%s\n", filename, data.c_str());
 
-            Dir opendir(const char * path)
-            {
-                Serial.printf("(Storage) Open folder '%s'\n", path);
-                return SPIFFS.openDir(path);
-            }
-    };
+            return data;
+        }
+
+        Dir opendir(const char * path)
+        {
+            Log.trace("(storage.opendir) Open folder '%s'", path);
+            return SPIFFS.openDir(path);
+        }
+};
 #endif

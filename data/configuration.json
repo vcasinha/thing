@@ -1,0 +1,14 @@
+{
+    "device": {
+        "location": "office"
+    },
+    "mqtt": {
+        "hostname": "petitmaison.duckdns.org",
+        "username": "mqtt",
+        "password": "mqtt",
+        "root_topic": "home"
+    },
+    "device_manager": {
+        "devices": {}
+    }
+}

@@ -2,10 +2,11 @@
 #define DEVICEMANAGER_MODULE_H
 
 #include <Arduino.h>
+#include <ArduinoLog.h>
 #include "DeviceFactory.h"
-#include "DHTFactory.h"
-#include "SwitchFactory.h"
-#include "BlinkFactory.h"
+//#include "DHTFactory.h"
+//#include "SwitchFactory.h"
+//#include "BlinkFactory.h"
 #include "Module.h"
 #include "MQTTModule.h"
 #include "Vector.h"
@@ -24,32 +25,28 @@ class DeviceManagerModule : public Module
         {
             this->_name = "device_manager";
             this->_loop_period_ms = 20;
-
-            this->addFactory(new DHTFactory());
-            this->addFactory(new SwitchFactory());
-            this->addFactory(new BlinkFactory());
+            //this->addFactory(new BlinkFactory());
         }
 
         void addFactory(DeviceFactory *factory)
         {
-            Serial.printf("(DeviceManager) Load factory of %s devices.\n", factory->_deviceType.c_str());
+            Log.notice("(deviceManager.addFactory) Load factory of %s devices.", factory->_deviceType.c_str());
             this->_factories.push(factory);
         }
 
-        void makeDevice(JsonObject & config)
+        void makeDevice(JsonObject config)
         {
             bool made = false;
             String device_type = config["type"].as<String>();
-
-            Serial.printf("(DeviceManager) Init '%s' device\n", device_type.c_str());
-            config.prettyPrintTo(Serial);
-            Serial.print("\n");
+            String json_config = "";
+            serializeJson(config, json_config);
+            Log.notice("(deviceManager.makeDevice) Init '%s' device (%s)", device_type.c_str(), json_config.c_str());
 
             for (unsigned int i = 0; i < this->_factories.size(); i++)
             {
                 if (device_type.equals(""))
                 {
-                    Serial.printf("(DeviceManager) ERROR undefined device type\n");
+                    Log.error("(deviceManager.makeDevice) ERROR undefined device type");
                     continue;
                 }
 
@@ -65,49 +62,58 @@ class DeviceManagerModule : public Module
 
             if (made == false)
             {
-                Serial.printf("(DeviceManager) ERROR Unknown device type '%s'.\n", device_type.c_str());
+                Log.error("(deviceManager.makeDevice) ERROR Unknown device type '%s'.", device_type.c_str());
             }
         }
 
         void config(JsonObject & config)
         {
+            Log.notice("Device manager");
+            serializeJson(config, Serial);
             if (config["devices"])
             {
                 for (unsigned int i = 0; i < this->_devices.size(); i++)
                 {
                     Device * device = this->_devices[i];
-                    Serial.printf("(DeviceManager) Update device configuration '%s'\n", device->_id.c_str());
                     if (config["devices"][device->_id])
                     {
-                        JsonObject &device_config = config["devices"][device->_id];
-                        device_config.prettyPrintTo(Serial);
-                        Serial.print("\n");
+                        JsonObject device_config = config["devices"][device->_id];
+                        String json_config = "";
+                        serializeJson(device_config, json_config);
+                        Log.notice("(deviceManager.config) Update device configuration '%s' ()", device->_id.c_str(), json_config.c_str());
                         this->_devices[i]->config(device_config);
                     }
                 }
             }
         }
 
-        virtual void boot(JsonObject &config)
+        virtual void boot(JsonObject & config)
         {
+            if (config.size() == 0)
+            {
+                Log.warning("(MQTT) Empty configuration, disabling Device Manager");
+                this->disable();
+                return;
+            }
+
             this->_mqtt = (MQTTModule *)this->_application->getModule("mqtt");
             this->_mqtt->registerCallback(this);
 
-            if (config["devices"])
+            if (config.containsKey("devices"))
             {
-                JsonObject &root = config["devices"];
-                Serial.printf("(DeviceManager) Booting %d devices\n", config["devices"].size());
-                for (JsonObject::iterator it = root.begin();it!=root.end();++it)
+                JsonObject root = config["devices"].as<JsonObject>();
+                Log.notice("(deviceManager.boot) Booting %d devices", config["devices"].size());
+                for (JsonObject::iterator it = root.begin();it != root.end();++it)
                 {
                     //config.prettyPrintTo(Serial);
-                    this->makeDevice(it->value);
+                    this->makeDevice(it->value().as<JsonObject>());
                 }
             }
         }
 
         virtual void setup(void)
         {
-            //Serial.printf("Setup devices\n");
+            //Log.notice("Setup devices");
             for (unsigned int i = 0; i < this->_devices.size(); i++)
             {
                 this->_devices[i]->setMQTT(this->_mqtt);
@@ -121,14 +127,14 @@ class DeviceManagerModule : public Module
             String data = (char *)payload;
             data.trim();
 
-            Serial.printf("(DeviceManager) Device callback on topic '%s' Data: %s\n", topic_string.c_str(), data.c_str());
+            Log.trace("(deviceManager.callback) Device callback on topic '%s' Data: %s", topic_string.c_str(), data.c_str());
             for (unsigned int i = 0; i < this->_devices.size(); i++)
             {
                 this->_devices[i]->callback(topic_string, data);
             }
         }
 
-        virtual void loop(void)
+        virtual void loop(unsigned long delta_time)
         {
             for (unsigned int i = 0; i < this->_devices.size(); i++)
             {

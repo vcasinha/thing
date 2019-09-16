@@ -2,15 +2,15 @@
 #define WIFI_MODULE_H
 
 #include <Arduino.h>
-#include "PersWiFiManager.h"
+#include <ESP8266WiFi.h>
 #include "Module.h"
-#include "ServerModule.h"
-#include "DeviceModule.h"
 
 class ServerModule;
 class WiFiModule : public Module
 {
     public:
+        WiFiClient _wifiClient;
+
         WiFiModule()
         {
             _name = "wifi";
@@ -23,6 +23,12 @@ class WiFiModule : public Module
 
         void setup(void)
         {
+        }
+
+        void loop(unsigned long delta_time)
+        {
+            //Check if still connected to WIFI
+            //Start AP when necessary
         }
     private:
 

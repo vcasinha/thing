@@ -1,179 +1,181 @@
 #ifndef MQTT_MODULE_H
-    #define MQTT_MODULE_H
+#define MQTT_MODULE_H
 
-    #include <Arduino.h>
-    #include <PubSubClient.h>
-    #include "DeviceModule.h"
-    #include "WiFiModule.h"
-    #include "Module.h"
+#include <Arduino.h>
+#include <ArduinoLog.h>
+#include <PubSubClient.h>
+#include "DeviceModule.h"
+#include "WiFiModule.h"
+#include "Module.h"
 
-    class MQTTModule : public Module
-    {
-        public:
-            WiFiClient _wifiClient;
-            PubSubClient * _client;
-            WiFiModule * _wifiModule;
-            DeviceModule *_deviceModule;
+class MQTTModule : public Module
+{
+    public:
+        PubSubClient * _client;
+        DeviceModule * _deviceModule;
+        WiFiModule * _wifiModule;
 
-            unsigned int _connectionCount = 0;
-            unsigned int _counter = 0;
+        unsigned int _totalConnectionCount = 0;
 
-            char _hostname[100];
-            char _username[20];
-            char _password[20];
-            char _rootTopic[20];
+        char _hostname[100];
+        char _username[20];
+        char _password[20];
+        char _rootTopic[20];
 
-            Vector<Module *> _callbacks;
-            Vector<String *> _subscriptions;
+        Vector<Module *> _callbacks;
+        Vector<String *> _subscriptions;
 
-            MQTTModule()
+        MQTTModule()
+        {
+            this->_name = "mqtt";
+        }
+
+        ~MQTTModule()
+        {
+            String topic = String("home/") + this->_application->_id + String("/state");
+            this->publish(topic.c_str(), "OFF");
+        }
+
+        virtual void boot(JsonObject & config)
+        {
+            int port = 1883;
+            this->_deviceModule = (DeviceModule *)this->_application->getModule("device");
+            this->_wifiModule = (WiFiModule *)this->_application->getModule("wifi");
+
+            if(config.size() == 0)
             {
-                this->_name = "mqtt";
+                Log.warning("(MQTT) Empty configuration, disable MQTT");
+                this->disable();
+                return;
             }
 
-            ~MQTTModule()
+            strcpy(this->_hostname, config["hostname"]);
+            strcpy(this->_username, config["username"]);
+            strcpy(this->_password, config["password"]);
+            strcpy(this->_rootTopic, config["root_topic"] | "home");
+
+            Log.notice("(MQTT.boot) ** MQTT Server address %s:%d", this->_hostname, port);
+            this->_client = new PubSubClient(this->_hostname, port, this->_wifiModule->_wifiClient);
+        }
+
+        virtual void setup(void)
+        {
+            Log.trace("(MQTT.setup) ** Register base callback");
+            this->_client->setCallback([this](char *topic, unsigned char *payload, unsigned int length) {
+                //Serial.printf("(MQTT) ** Base callback\n");
+                this->callback(topic, payload, length);
+            });
+            this->connect();
+        }
+
+        virtual void loop(unsigned long delta_time)
+        {
+            if(WiFi.getMode() == WIFI_AP)
             {
-                String topic = String("home/") + this->_application->_id + String("/state");
-                this->_client->publish(topic.c_str(), "OFF");
+                return;
             }
 
-            virtual void boot(JsonObject & config)
+            this->connect();
+            if (WiFi.status() == WL_CONNECTED && this->_client->connected())
             {
-                int port = 1883;
-                this->_wifiModule = (WiFiModule *) this->_application->getModule("wifi");
-                this->_deviceModule = (DeviceModule * ) this->_application->getModule("device");
-
-                if(config.size() == 0)
+                bool status = this->_client->loop();
+                if (!status)
                 {
-                    Serial.printf("(MQTT) Empty configuration\n");
-                    //this->disable();
-                    //return;
+                    Log.error("(MQTT.loop) ** Loop failed - Force disconnection");
+                    this->_client->disconnect();
                 }
-
-                strcpy(this->_hostname, config["hostname"]);
-                strcpy(this->_username, config["username"]);
-                strcpy(this->_password, config["password"]);
-                strcpy(this->_rootTopic, config["root_topic"] | "home");
-
-                Serial.printf("(MQTT) ** Connecting to %s:%d\n", this->_hostname, port);
-
-                this->_client = new PubSubClient(this->_hostname, port, this->_wifiClient);
             }
+        }
 
-            virtual void setup(void)
+        void connect(void)
+        {
+            if (WiFi.status() == WL_CONNECTED && this->_client->connected() == false)
             {
-                Serial.printf("(MQTT) ** Register base callback\n");
-                this->_client->setCallback([this](char *topic, unsigned char *payload, unsigned int length) {
-                    //Serial.printf("(MQTT) ** Base callback\n");
-                    this->callback(topic, payload, length);
-                });
-                this->connect();
-            }
-
-            virtual void loop(void)
-            {
-                if(WiFi.getMode() == WIFI_AP)
+                this->_totalConnectionCount++;
+                Log.notice("(MQTT.connect) Connect to %s as '%s':'%s' attempt %d", this->_hostname, this->_username, this->_password, this->_totalConnectionCount);
+                this->_client->connect(this->_deviceModule->_hostname.c_str(), this->_username, this->_password);
+                if (this->_client->connected() == false)
                 {
-                    return;
+                    Log.error("(MQTT.connect) Not able to connect to server, wait 1s");
+                    delay(1000);
                 }
-
-                this->connect();
-                if (WiFi.status() == WL_CONNECTED)
+                else
                 {
-                    bool status = this->_client->loop();
-                    if (!status)
+                    Log.notice("(MQTT.connect) Connection successfull");
+                    for (unsigned int i = 0; i < this->_subscriptions.size(); i++)
                     {
-                        Serial.printf("(MQTT) ** Loop failed - Force disconnection\n");
-                        this->_client->disconnect();
+                        const char *topic = this->_subscriptions[i]->c_str();
+                        Log.trace("(MQTT.connect) Resubscribe topic '%s'", topic);
+                        this->_client->unsubscribe(topic);
+                        this->_client->subscribe(topic);
                     }
                 }
             }
+        }
 
-            void connect(void)
+        void registerCallback(Module * module)
+        {
+            Log.trace("(MQTT.registerCallback) Module '%s' requested MQTT callback", module->_name);
+            this->_callbacks.push(module);
+        }
+
+        void callback(char * topic, unsigned char * payload, unsigned int length)
+        {
+            Log.trace("(MQTT.callback) topic '%s'", topic);
+            for(unsigned int c = 0;c < _callbacks.size();c++)
             {
-                if (WiFi.status() == WL_CONNECTED && this->_client->connected() == false)
-                {
-                    this->_counter = 0;
-                    Serial.printf("(MQTT) Connect to %s as '%s':'%s' attempt %d\n", this->_hostname, this->_username, this->_password, this->_connectionCount);
-                    while (this->_client->connected() == false)
-                    {
-                        Serial.printf("(MQTT) ** Attempt %d of 5\n", ++this->_counter);
-                        this->_client->connect(this->_deviceModule->_hostname.c_str(), this->_username, this->_password);
-                        if (this->_client->connected() == false)
-                        {
-                            this->_connectionCount++;
-                            this->_counter++;
-                            Serial.printf("(MQTT) ** Not able to connect to server\n");
-                            if (this->_counter >= 5)
-                            {
-                                this->_counter = 0;
-                                Serial.printf("(MQTT) ** Give up MQTT after %d attempts\n", this->_counter);
-                                //this->disable();
-                                return;
-                            }
-                            delay(500);
-                        }
-                        else
-                        {
-                            Serial.printf("(MQTT) Refresh\n");
-                            for(unsigned int i = 0;i < this->_subscriptions.size();i++)
-                            {
-                                const char *topic = this->_subscriptions[i]->c_str();
-                                Serial.printf("(MQTT) * Refresh topic '%s'\n", topic);
-                                this->_client->unsubscribe(topic);
-                                this->_client->subscribe(topic);
-                            }
-                        }
-                    }
-                }
+                Log.verbose("(MQTT.callback) Module '%s' callbacks", this->_callbacks[c]->_name);
+                this->_callbacks[c]->callback(topic, payload, length);
+            }
+        }
+
+        void publish(const char * topic, const char * payload)
+        {
+            if(this->_enabled == false)
+            {
+                return;
+            }
+            Log.trace("(MQTT.publish) Publish on %s payload: %s", topic, payload);
+            this->_client->publish(topic, payload);
+        }
+
+        void publish(const char *topic, const char *payload, unsigned int length)
+        {
+            if(this->_enabled == false)
+            {
+                return;
+            }
+            Log.trace("(MQTT.publish) Publish on '%s' payload %s", topic, payload);
+            this->_client->publish(topic, payload, length);
+        }
+
+        void publishState(const char *device_type, const char * location, const char * device_class, const char *payload)
+        {
+            if(this->_enabled == false)
+            {
+                return;
+            }
+            char topic[200];
+            this->makeTopic(topic, device_type, location, device_class, "state");
+            this->publish(topic, payload);
+        }
+
+        void makeTopic(char * topic, const char * device_type, const char * location, const char * device_class, const char * subject)
+        {
+            sprintf(topic, "%s/%s/%s/%s/%s", this->_rootTopic, device_type, location, device_class, subject);
+        }
+
+        void subscribe(const char * topic)
+        {
+            if(this->_enabled == false)
+            {
+                return;
             }
 
-            void registerCallback(Module * module)
-            {
-                Serial.printf("(MQTT) Module '%s' requested MQTT callback\n", module->_name);
-                this->_callbacks.push(module);
-            }
-
-            void callback(char * topic, unsigned char * payload, unsigned int length)
-            {
-                Serial.printf("(MQTT) topic '%s'\n", topic);
-                for(unsigned int c = 0;c < _callbacks.size();c++)
-                {
-                    Serial.printf("(MQTT) * Module '%s' callbacks\n", this->_callbacks[c]->_name);
-                    this->_callbacks[c]->callback(topic, payload, length);
-                }
-            }
-
-            void publish(const char * topic, const char * payload)
-            {
-                Serial.printf("(MQTT) Publish on %s payload: %s\n", topic, payload);
-                this->_client->publish(topic, payload);
-            }
-
-            void publish(const char *topic, const char *payload, unsigned int length)
-            {
-                Serial.printf("(MQTT) Publish on '%s' payload %s\n", topic, payload);
-                this->_client->publish(topic, payload, length);
-            }
-
-            void publishState(const char *device_type, const char * location, const char * device_class, const char *payload)
-            {
-                char topic[200];
-                this->makeTopic(topic, device_type, location, device_class, "state");
-                this->publish(topic, payload);
-            }
-
-            void makeTopic(char * topic, const char * device_type, const char * location, const char * device_class, const char * subject)
-            {
-                sprintf(topic, "%s/%s/%s/%s/%s", this->_rootTopic, device_type, location, device_class, subject);
-            }
-
-            void subscribe(const char * topic)
-            {
-                Serial.printf("(MQTT) Subscribe '%s' topic\n", topic);
-                this->_client->subscribe(topic);
-                this->_subscriptions.push(new String(topic));
-            }
-    };
+            Log.trace("(MQTT.subscribe) Subscribe '%s' topic", topic);
+            this->_client->subscribe(topic);
+            this->_subscriptions.push(new String(topic));
+        }
+};
 
 #endif

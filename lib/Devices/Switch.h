@@ -2,6 +2,7 @@
 #define SWITCH_H
 
 #include <Arduino.h>
+#include <ArduinoLog.h>
 #include "Device.h"
 
 class Switch final: public Device
@@ -13,6 +14,7 @@ class Switch final: public Device
         {
             this->_type = "switch";
             this->_updatePeriod = 60;
+            Log.notice("(switch.construct) Update period %u", this->_updatePeriod);
         }
 
         ~Switch()
@@ -24,6 +26,8 @@ class Switch final: public Device
         {
             this->_pin = config["pin"];
             pinMode(this->_pin, OUTPUT);
+
+            Log.notice("(switch.construct) Switch on pin %u", this->_pin);
         }
 
         void updateState(bool state)
