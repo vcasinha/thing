@@ -169,6 +169,16 @@ void Application::setup(void)
     String hostname = ((DeviceModule *)this->getModule("device"))->_hostname;
     WiFi.hostname(hostname.c_str());
 
+    Log.notice("(serverModule.setup) Configure MDNS with hostname %s.local", hostname.c_str());
+    if (!MDNS.begin(hostname.c_str()))
+    {
+        Log.error("(serverModule.setup) Failed to initialize mDNS responder");
+    }
+    else
+    {
+        Log.notice("(serverModule.setup) mDNS responder started");
+    }
+
     if (WiFi.getMode() == WIFI_STA)
     {
         Log.notice("(application.setup) ###############################################");

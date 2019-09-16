@@ -49,17 +49,11 @@ public:
 
     virtual void setup(void)
     {
+        this->_wifiManager->setConnectNonBlock(false);
         this->_wifiManager->setApCredentials(this->_deviceModule->_hostname, "password#");
-        this->_wifiManager->begin();
-
-        Log.notice("(serverModule.setup) Configure MDNS with hostname %s.local", this->_deviceModule->_hostname.c_str());
-        if (!MDNS.begin(this->_deviceModule->_hostname.c_str()))
+        if(this->_wifiManager->begin())
         {
-            Log.error("(serverModule.setup) Failed to initialize mDNS responder");
-        }
-        else
-        {
-            Log.notice("(serverModule.setup) mDNS responder started");
+            Log.notice("(serverModule.setup) Connected to WIFI");
         }
 
         this->_webServer->on("/restart", HTTP_GET, [this]() {

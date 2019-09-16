@@ -4,6 +4,7 @@
 */
 
 #include "PersWiFiManager.h"
+#include <ArduinoLog.h>
 
 PersWiFiManager::PersWiFiManager(ESP8266WebServer *s, DNSServer *d)
 {
@@ -14,6 +15,7 @@ PersWiFiManager::PersWiFiManager(ESP8266WebServer *s, DNSServer *d)
 
 bool PersWiFiManager::begin(const String &ssid, const String &pass)
 {
+    Log.notice("(wifiManager.begin)");
     setupWiFiHandlers();
     return attemptConnection(ssid, pass); //switched order of these two for return
 } //begin
@@ -21,6 +23,7 @@ bool PersWiFiManager::begin(const String &ssid, const String &pass)
 bool PersWiFiManager::attemptConnection(const String &ssid, const String &pass)
 {
     //attempt to connect to wifi
+    Log.notice("(wifiManager.attemptConnection) Connecting %s", ssid.c_str());
     WiFi.mode(WIFI_STA);
     if (ssid.length())
     {
@@ -53,6 +56,7 @@ void PersWiFiManager::handleWiFi()
 
     if (WiFi.status() == WL_CONNECTED)
     {
+        Log.notice("(wifiManager.handleWiFi) Connected");
         _connectStartTime = 0;
         if (_connectHandler)
             _connectHandler();
@@ -62,6 +66,7 @@ void PersWiFiManager::handleWiFi()
     //if failed or not connected and time is up
     if ((WiFi.status() == WL_CONNECT_FAILED) || ((WiFi.status() != WL_CONNECTED) && ((millis() - _connectStartTime) > (1000 * WIFI_CONNECT_TIMEOUT))))
     {
+        Log.notice("(wifiManager.handleWiFi) Start AP");
         startApMode();
         _connectStartTime = 0; //reset connect start time
     }

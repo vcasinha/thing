@@ -15,8 +15,32 @@ class StorageModule: public Module
             this->_name = "storage";
             if (SPIFFS.begin() == false)
             {
-                Log.error("(storage.construct) ** Error initializing filesystem");
+                Log.error("(storage.construct) Error initializing SPIFFS filesystem");
             }
+        }
+
+        File getFile(const char *filename, const char *mode)
+        {
+            Log.trace("(storage.getFile) Get file '%s'", filename);
+            return SPIFFS.open(filename, mode);
+        }
+
+        bool append(const char * filename, const char * data)
+        {
+            Log.trace("(storage.write) Open file '%s'", filename);
+            File file = SPIFFS.open(filename, "a");
+            if (!file)
+            {
+                Log.error("(storage.write) Could not open '%s'", filename);
+                return false;
+            }
+
+            //Serial.printf("Writing on %s the following data:\n%s\n", filename, module_data);
+
+            file.println(data);
+            file.close();
+
+            return true;
         }
 
         bool write(const char * filename, const char * module_data)
@@ -37,12 +61,6 @@ class StorageModule: public Module
             return true;
         }
 
-        File getFile(const char * filename, const char * mode)
-        {
-            Log.trace("(storage.getFile) Get file '%s'", filename);
-            return SPIFFS.open(filename, mode);
-        }
-
         bool exists(const char * filename)
         {
             if (SPIFFS.exists(filename) == false)
@@ -51,6 +69,11 @@ class StorageModule: public Module
             }
 
             return true;
+        }
+
+        bool remove(const char *path)
+        {
+            return SPIFFS.remove(path);
         }
 
         String read(const char * filename)
@@ -85,6 +108,11 @@ class StorageModule: public Module
         {
             Log.trace("(storage.opendir) Open folder '%s'", path);
             return SPIFFS.openDir(path);
+        }
+
+        bool fsInfo(FSInfo & info)
+        {
+            return SPIFFS.info(info);
         }
 };
 #endif
