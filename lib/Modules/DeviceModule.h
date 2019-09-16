@@ -15,7 +15,11 @@ class DeviceModule : public Module
     public:
         String _boardID;
         String _hostname;
+        String _password;
         String _location;
+        bool _secure;
+        unsigned long _previousTime;
+        unsigned long _startTime;
 
         DeviceModule()
         {
@@ -33,8 +37,14 @@ class DeviceModule : public Module
         {
             this->_hostname = config["name"] | this->_boardID.c_str();
             this->_location = config["location"] | "unknown";
+            this->_password = config["password"] | "password";
+            this->_secure = config["secure"] | false;
 
-            Log.notice("(device.boot) Booting %s @ %s", this->_hostname.c_str(), this->_location.c_str());
+            Log.notice("(device.boot) Booting %s @ %s", this->_hostname.c_str(), this->_location.c_str(), this->_password.c_str());
+            if(this->_secure)
+            {
+                Log.notice("(device.boot) Device is in secure mode");
+            }
 
             ArduinoOTA.onStart([this]() {
                 Log.notice("(device.OTA) Begin update");
@@ -47,17 +57,23 @@ class DeviceModule : public Module
                 {
                     type = "filesystem";
                 }
-
+                this->_startTime = millis();
                 // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-                Log.notice("(device.OTA) Updating: ", type.c_str());
+                Log.notice("(device.OTA) Updating %s", type.c_str());
             });
 
             ArduinoOTA.onEnd([this]() {
-                Log.notice("(device.OTA) Update complete");
+                String t = String((float)(millis() - this->_startTime) / 1000, 2);
+                Log.notice("(device.OTA) Update completed in %s seconds", t.c_str());
             });
 
             ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
-                Log.notice("(device.OTA) Progress: %i%%", (progress / (total / 100)));
+                unsigned long currentTime = millis();
+                if(currentTime - this->_previousTime  > 2000)
+                {
+                    Log.notice("(device.OTA) Progress: %i%%", (progress / (total / 100)));
+                    this->_previousTime = currentTime;
+                }
             });
 
             ArduinoOTA.onError([this](ota_error_t error) {
@@ -74,8 +90,12 @@ class DeviceModule : public Module
                     Log.error("(device.OTA) OTA Failed to finish");
             });
             //ArduinoOTA.setPort(8266);
-            //ArduinoOTA.setHostname(this->_hostname);
-            //ArduinoOTA.setPassword((const char *)"123");
+            ArduinoOTA.setHostname(this->_hostname.c_str());
+            if(this->_secure)
+            {
+                ArduinoOTA.setPassword(this->_password.c_str());
+            }
+
             Log.notice("(device.boot) OTA Initialize");
             ArduinoOTA.begin();
         }

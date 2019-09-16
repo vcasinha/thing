@@ -2,20 +2,20 @@
 #define DHTFACTORY_H
 
 #include <Arduino.h>
-#include "DeviceFactory.h"
-#include "DHTDevice.h"
+#include "UnitFactory.h"
+#include "DHTUnit.h"
 
-class DHTFactory: public DeviceFactory
+class DHTFactory: public UnitFactory
 {
     public:
         DHTFactory()
         {
-            this->_deviceType = "dht";
+            this->_unitType = "dht";
         }
 
-        virtual Device * makeDevice()
+        virtual Unit * make()
         {
-            return new DHTDevice();
+            return new DHTUnit();
         }
 };
 

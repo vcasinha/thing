@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include "MQTTModule.h"
 
-class Device
+class Unit
 {
 protected:
     unsigned int _updateFrequency = 1;
@@ -17,23 +17,25 @@ public:
     bool _useFrequency = false;
 
     unsigned int _lastUpdate = 0;
-    unsigned int _updatePeriod = 60;
+    unsigned int _updatePeriod = 60000;
+    unsigned long _MQTTUpdatePeriod = 60;
+    unsigned long _previousMQTTUpdate = 0;
 
     char _commandTopic[100];
     char _availabilityTopic[100];
     char _stateTopic[100];
     bool _state = false;
 
-    Device()
+    Unit()
     {
-        this->_type = "device";
+        this->_type = "unit";
     }
 
-    virtual ~Device()
+    virtual ~Unit()
     {
     }
 
-    void setFrenquency(unsigned int frequency)
+    void setFrequency(unsigned int frequency)
     {
         if (this->_useFrequency)
         {
@@ -55,7 +57,7 @@ public:
         if (!this->_useFrequency)
         {
             Log.notice("(device.setPeriod) '%s' set period to %d", this->_id.c_str(), period);
-            this->_updatePeriod = period * 1000;
+            this->_updatePeriod = period;
         }
     }
 
@@ -106,7 +108,7 @@ public:
     {
         this->_id = config["id"].as<String>();
         this->_state = config["state"].as<bool>() | false;
-        this->_location = config["location"].as<String>();
+        this->_location = config["location"] | "unknown";
         this->setPeriod(this->_updatePeriod);
         this->config(config);
 
@@ -122,7 +124,7 @@ public:
 
         if (config.containsKey("frequency"))
         {
-            this->setFrenquency(config["frequency"].as<int>());
+            this->setFrequency(config["frequency"].as<int>());
         }
 
         if (config.containsKey("period"))
@@ -136,7 +138,8 @@ public:
     virtual void onCommand(String) {}
     virtual void deviceConfig(JsonObject &config) {}
     virtual void setup() {}
-    virtual void loop() {}
+    virtual void loop(unsigned long, unsigned long) {}
+    virtual void MQTTLoop(unsigned long, unsigned long) {}
 };
 
 #endif

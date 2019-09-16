@@ -5,48 +5,47 @@
 #include <ArduinoLog.h>
 #include <ArduinoJson.h>
 #include "DHTesp.h"
-#include "Device.h"
+#include "Unit.h"
 
-class DHTDevice : public Device
+class DHTUnit : public Unit
 {
-    public:
-        float _humidity;
-        float _temperature;
-        DHTesp _dht;
-        unsigned int _pin;
-        unsigned int _status;
-        /** Comfort profile */
-        ComfortState _cf;
+public:
+    float _humidity;
+    float _temperature;
+    DHTesp _dht;
+    unsigned int _pin;
+    unsigned int _status;
+    /** Comfort profile */
+    ComfortState _cf;
 
-        DHTDevice()
+    DHTUnit()
+    {
+        this->_type = "sensor";
+    }
+
+    virtual void config(JsonObject &config)
+    {
+        this->_pin = config["pin"] | 0;
+        this->_dht.setup(this->_pin, DHTesp::AUTO_DETECT);
+        Log.notice("(DHT.config) DHT on pin %u", this->_pin);
+    }
+
+    virtual void MQTTLoop(unsigned long time, unsigned long delta_time)
+    {
+        DynamicJsonDocument buffer(512);
+        JsonObject json = buffer.to<JsonObject>();
+        String state;
+
+        TempAndHumidity newValues = this->_dht.getTempAndHumidity();
+        if (this->_dht.getStatus() != 0)
         {
-            this->_type = "sensor";
-            Log.notice("(DHT.init) Update period %u", this->_updatePeriod);
+            Log.error("(DHT) Error status: %s", this->_dht.getStatusString());
+            return;
         }
 
-        virtual void config(JsonObject &config)
-        {
-            this->_pin = config["pin"] | 0;
-            this->_dht.setup(this->_pin, DHTesp::AUTO_DETECT);
-            Log.notice("(DHT.config) DHT on pin %u", this->_pin);
-        }
-
-        virtual void loop()
-        {
-            DynamicJsonDocument buffer(512);
-            JsonObject json = buffer.to<JsonObject>();
-            String state;
-
-            TempAndHumidity newValues = this->_dht.getTempAndHumidity();
-            if (this->_dht.getStatus() != 0)
-            {
-                Log.error("(DHT) Error status: %s", this->_dht.getStatusString());
-                return;
-            }
-
-            this->_temperature = newValues.temperature;
-            this->_humidity = newValues.humidity;
-            /*
+        this->_temperature = newValues.temperature;
+        this->_humidity = newValues.humidity;
+        /*
             float heatIndex = this->_dht.computeHeatIndex(newValues.temperature, newValues.humidity);
             float dewPoint = this->_dht.computeDewPoint(newValues.temperature, newValues.humidity);
             float cr = this->_dht.getComfortRatio(this->_cf, newValues.temperature, newValues.humidity);
@@ -92,12 +91,12 @@ class DHTDevice : public Device
             json["headIndex"] = heatIndex;
             */
 
-            json["temperature"] = this->_temperature;
-            json["humidity"] = this->_humidity;
+        json["temperature"] = this->_temperature;
+        json["humidity"] = this->_humidity;
 
-            serializeJson(buffer, state);
-            this->publishState(state.c_str());
-        }
+        serializeJson(buffer, state);
+        this->publishState(state.c_str());
+    }
 };
 
 #endif

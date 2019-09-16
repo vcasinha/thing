@@ -9,7 +9,8 @@
 #include "RFModule.h"
 #include "PersWiFiManager.h"
 #include "ServerModule.h"
-#include "DeviceManagerModule.h"
+#include "TimeModule.h"
+#include "UnitManagerModule.h"
 
 Application::Application(const char * id)
 {
@@ -41,8 +42,9 @@ Application::Application(const char * id)
     this->loadModule(new MQTTModule());
     this->loadModule(new WiFiModule());
     this->loadModule(new ServerModule());
-    this->loadModule(new DeviceManagerModule());
+    this->loadModule(new UnitManagerModule());
     this->loadModule(new RFModule());
+    this->loadModule(new TimeModule());
 }
 
 void Application::loadModule(Module * module)
@@ -64,7 +66,8 @@ Module * Application::getModule(const char * name)
         }
     }
 
-    Log.error("(application.getModule) Module not found '%s' *****", name);
+    Log.fatal("(application.getModule) Module not found '%s'", name);
+    Log.fatal("(application.getModule) Abort");
     abort();
 }
 
@@ -164,30 +167,6 @@ void Application::setup(void)
         {
             Log.warning("(application.setup) * Module disabled '%s' *  ", module->_name);
         }
-    }
-
-    String hostname = ((DeviceModule *)this->getModule("device"))->_hostname;
-    WiFi.hostname(hostname.c_str());
-
-    Log.notice("(serverModule.setup) Configure MDNS with hostname %s.local", hostname.c_str());
-    if (!MDNS.begin(hostname.c_str()))
-    {
-        Log.error("(serverModule.setup) Failed to initialize mDNS responder");
-    }
-    else
-    {
-        Log.notice("(serverModule.setup) mDNS responder started");
-    }
-
-    if (WiFi.getMode() == WIFI_STA)
-    {
-        Log.notice("(application.setup) ###############################################");
-        Log.notice("(application.setup) ### Application URL http://%s.local (%s)", hostname.c_str(), WiFi.localIP().toString().c_str());
-    }
-    else
-    {
-        Log.notice("(application.setup) ###############################################");
-        Log.notice("(application.setup) ### AP Mode http://%s.local (%s)", hostname.c_str(), WiFi.localIP().toString().c_str());
     }
 }
 

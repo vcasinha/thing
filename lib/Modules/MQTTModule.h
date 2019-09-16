@@ -89,7 +89,7 @@ class MQTTModule : public Module
 
         void connect(void)
         {
-            if (WiFi.status() == WL_CONNECTED && this->_client->connected() == false)
+            if (WiFi.status() == WL_CONNECTED && this->_client->connected() == false && WiFi.getMode() == WIFI_STA)
             {
                 this->_totalConnectionCount++;
                 Log.notice("(MQTT.connect) Connect to %s as '%s':'%s' attempt %d", this->_hostname, this->_username, this->_password, this->_totalConnectionCount);
@@ -105,7 +105,7 @@ class MQTTModule : public Module
                     for (unsigned int i = 0; i < this->_subscriptions.size(); i++)
                     {
                         const char *topic = this->_subscriptions[i]->c_str();
-                        Log.trace("(MQTT.connect) Resubscribe topic '%s'", topic);
+                        Log.trace("(MQTT.connect) Refresh server on topic '%s'", topic);
                         this->_client->unsubscribe(topic);
                         this->_client->subscribe(topic);
                     }
@@ -131,7 +131,7 @@ class MQTTModule : public Module
 
         void publish(const char * topic, const char * payload)
         {
-            if(this->_enabled == false)
+            if(this->_enabled == false || !this->_client->connected())
             {
                 return;
             }
@@ -141,7 +141,7 @@ class MQTTModule : public Module
 
         void publish(const char *topic, const char *payload, unsigned int length)
         {
-            if(this->_enabled == false)
+            if (this->_enabled == false || !this->_client->connected())
             {
                 return;
             }
@@ -173,8 +173,11 @@ class MQTTModule : public Module
             }
 
             Log.trace("(MQTT.subscribe) Subscribe '%s' topic", topic);
-            this->_client->subscribe(topic);
             this->_subscriptions.push(new String(topic));
+            if (this->_client->connected())
+            {
+                this->_client->subscribe(topic);
+            }
         }
 };
 

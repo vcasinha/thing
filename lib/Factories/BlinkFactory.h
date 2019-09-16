@@ -5,15 +5,15 @@
 #include "DeviceFactory.h"
 #include "Blink.h"
 
-class BlinkFactory : public DeviceFactory
+class BlinkFactory : public UnitFactory
 {
     public:
         BlinkFactory()
         {
-            this->_deviceType = "blink";
+            this->_unitType = "blink";
         }
 
-        virtual Device * makeDevice()
+        virtual Device * make()
         {
             return new Blink();
         }

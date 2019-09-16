@@ -7,13 +7,11 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include "PersWiFiManager.h"
+//#include "PersWiFiManager.h"
 #include <DNSServer.h>
 #include <FS.h>
 
 #include "Module.h"
-#include "WiFiModule.h"
 #include "StorageModule.h"
 #include "DeviceModule.h"
 
@@ -21,13 +19,16 @@ class ServerModule : public Module
 {
 public:
     const char *_refreshHTML = "<script>window.location='/'</script><a href='/'>redirecting...</a>";
+    String _username;
+    String _password;
+    String _realm = "Authentication required";
+    String _authFailMessage = "Authentication failed";
     DeviceModule *_deviceModule;
     StorageModule *_storageModule;
     ESP8266WebServer *_webServer;
     DNSServer *_nameServer;
-    PersWiFiManager *_wifiManager;
-    unsigned int _timeSinceLastConnection = 0;
-    unsigned long _millisCounter = 0;
+
+    //PersWiFiManager *_wifiManager;
 
     ServerModule()
     {
@@ -44,55 +45,72 @@ public:
         this->_storageModule = (StorageModule *)this->_application->getModule("storage");
         this->_nameServer = new DNSServer();
         this->_webServer = new ESP8266WebServer(80);
-        this->_wifiManager = new PersWiFiManager(this->_webServer, this->_nameServer);
+        //this->_wifiManager = new PersWiFiManager(this->_webServer, this->_nameServer);
+
     }
 
     virtual void setup(void)
     {
-        this->_wifiManager->setConnectNonBlock(false);
-        this->_wifiManager->setApCredentials(this->_deviceModule->_hostname, "password#");
-        if(this->_wifiManager->begin())
-        {
-            Log.notice("(serverModule.setup) Connected to WIFI");
-        }
+        // this->_wifiManager->setConnectNonBlock(false);
+        // this->_wifiManager->setApCredentials(this->_deviceModule->_hostname, "password#");
+        // if(this->_wifiManager->begin())
+        // {
+        //     Log.notice("(serverModule.setup) Connected to WIFI");
+        // }
 
         this->_webServer->on("/restart", HTTP_GET, [this]() {
-            Log.notice("(Server) Restart requested");
+            if (!this->isAuthenticated()) {
+                return;
+            }
+
+            Log.notice("(webServer.restart) Restart requested");
             this->_webServer->send(200, "application/json", "{\"_status\":\"Restarting\"}");
             this->_webServer->handleClient();
             this->_deviceModule->restart();
         });
 
         this->_webServer->on("/wifi/reset", HTTP_GET, [this]() {
-            Log.notice("(Server) WiFi reset requested");
+            if (!this->isAuthenticated()) {
+                return;
+            }
+
+            Log.notice("(webServer.resetWiFi) WiFi reset requested");
             this->_webServer->send(200, "application/json", "{\"_status\":\"WiFi Reset (restarting)\"}");
             this->_webServer->handleClient();
             this->_deviceModule->eraseWiFiSettings();
         });
 
-        this->_webServer->on("/update", HTTP_GET, [this]() {
-            Log.notice("(Server) Update requested");
-            if (!this->_webServer->hasArg("filename"))
-            {
-                this->_webServer->send(500, "application/json", "{\"_status\":\"filename argument is missing\"}");
+        // this->_webServer->on("/update", HTTP_GET, [this]() {
+        //     if (!this->isAuthenticated()) {
+        //         return;
+        //     }
+
+        //     Log.notice("(Server) Update requested");
+        //     if (!this->_webServer->hasArg("filename"))
+        //     {
+        //         this->_webServer->send(500, "application/json", "{\"_status\":\"filename argument is missing\"}");
+        //         return;
+        //     }
+
+        //     String filename = this->_webServer->arg("filename");
+        //     bool state = this->_deviceModule->update(filename);
+
+        //     String response = "{\"_status\":\"";
+        //     response.concat(state ? "success \"}" : "failed \"}");
+
+        //     this->_webServer->send(state ? 200 : 500, "application/json", response);
+        //     this->_webServer->handleClient();
+        // });
+
+        this->_webServer->on("/configuration", HTTP_GET, [this]() {
+            if (!this->isAuthenticated()) {
                 return;
             }
 
-            String filename = this->_webServer->arg("filename");
-            bool state = this->_deviceModule->update(filename);
-
-            String response = "{\"_status\":\"";
-            response.concat(state ? "success \"}" : "failed \"}");
-
-            this->_webServer->send(state ? 200 : 500, "application/json", response);
-            this->_webServer->handleClient();
-        });
-
-        this->_webServer->on("/configuration", HTTP_GET, [this]() {
             String contentType = "application/json";
             String path = "/configuration.json";
 
-            Log.notice("(Server) ** Read configuration file '%s'", path.c_str());
+            Log.notice("(webServer.configuration.GET) ** Read configuration file '%s'", path.c_str());
             if (this->_storageModule->exists(path.c_str()) == false)
             {
                 Log.notice("(Server) ** File not found '%s'", path.c_str());
@@ -106,16 +124,20 @@ public:
         });
 
         this->_webServer->on("/configuration", HTTP_POST, [this]() {
+            if (!this->isAuthenticated()) {
+                return;
+            }
+
             String contentType = "application/json";
             String path = "/configuration.json";
-            DynamicJsonDocument buffer(1024);
 
-            Log.notice("(Server) ** Write configuration file '%s'", path.c_str());
+            Log.notice("(web.configuration.POST) ** Write configuration file '%s'", path.c_str());
             if (!this->_webServer->hasArg("plain"))
             {
                 this->_webServer->send(500, "application/json", "{\"_status\":\"Body missing\"}");
                 return;
             }
+
             String body = this->_webServer->arg("plain");
 
             if (this->_storageModule->write(path.c_str(), body.c_str()) == false)
@@ -130,11 +152,17 @@ public:
         });
 
         this->_webServer->on("/list", HTTP_GET, [this]() {
+            if (!this->isAuthenticated()) {
+                return;
+            }
+
             if (!this->_webServer->hasArg("path"))
             {
                 this->_webServer->send(500, "application/json", "{\"_status\":\"Path argument is missing\"}");
                 return;
             }
+
+            Log.notice("(web.list.GET) Get list of files");
 
             String path = this->_webServer->arg("path");
             Log.notice("(Server) handleFileList: %s", path.c_str());
@@ -163,17 +191,34 @@ public:
             this->_webServer->send(200, "text/json", output);
         });
 
-        this->_webServer->on("/all", HTTP_GET, [this]() {
-            String json = "{";
-            json += "\"heap\":" + String(ESP.getFreeHeap());
-            json += ", \"analog\":" + String(analogRead(A0));
-            json += ", \"gpio\":" + String((uint32_t)(((GPI | GPO) & 0xFFFF) | ((GP16I & 0x01) << 16)));
-            json += "}";
-            this->_webServer->send(200, "application/json", json);
-            json = String();
+        this->_webServer->on("/info", HTTP_GET, [&]() {
+            if (!this->isAuthenticated()) {
+                return;
+            }
+
+            DynamicJsonDocument buffer(256);
+            JsonObject json = buffer.to<JsonObject>();
+            String response;
+
+            json["hostname"] = this->_deviceModule->_hostname;
+            json["wifiMode"] = WiFi.getMode() == WIFI_STA ? "Station" : "AP";
+            json["SSID"] = WiFi.SSID();
+            json["gpio"] = String((uint32_t)(((GPI | GPO) & 0xFFFF) | ((GP16I & 0x01) << 16)), BIN);
+            json["flashRealSize"] = ESP.getFlashChipRealSize();
+            json["flashChipSize"] = ESP.getFlashChipSize();
+            json["flashChipSpeed"] = ESP.getFlashChipSpeed();
+            FlashMode_t ideMode = ESP.getFlashChipMode();
+            json["flashMode"] = (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN");
+
+            serializeJson(buffer, response);
+
+            this->_webServer->send(200, "application/json", response);
         });
 
-        this->_webServer->on("/", HTTP_GET, [this]() {
+        this->_webServer->on("/", HTTP_GET, [&]() {
+            if (!this->isAuthenticated()) {
+                return;
+            }
             String uri = this->_webServer->uri();
             String output = "Frontpage";
 
@@ -181,7 +226,10 @@ public:
             this->_webServer->send(200, "text/html", output);
         });
 
-        this->_webServer->onNotFound([this]() {
+        this->_webServer->onNotFound([&]() {
+            if (!this->isAuthenticated()) {
+                return;
+            }
             String uri = this->_webServer->uri();
 
             Log.notice("(Server) Default route, serving file: %s", uri.c_str());
@@ -202,6 +250,22 @@ public:
         this->_webServer->begin();
     }
 
+    bool isAuthenticated()
+    {
+        if(!this->_deviceModule->_secure)
+        {
+            return true;
+        }
+
+        bool authenticated = this->_webServer->authenticate(this->_deviceModule->_hostname.c_str(), this->_deviceModule->_password.c_str());
+        if(!authenticated)
+        {
+            this->_webServer->requestAuthentication();
+        }
+
+        return authenticated;
+    }
+
     String getContentType(String filename)
     { // convert the file extension to the MIME type
         if (filename.endsWith(".html"))
@@ -218,23 +282,8 @@ public:
     virtual void loop(unsigned long delta_time)
     {
         //Count time and reconnect if not connected
-        this->_millisCounter += delta_time;
-        if (this->_millisCounter > 1000 && WiFi.status() != WL_CONNECTED)
-        {
-            this->_timeSinceLastConnection += 1;
-            this->_millisCounter = 0;
-            Log.notice("WiFi not connected since %d", this->_timeSinceLastConnection);
-            if (this->_timeSinceLastConnection > 300)
-            {
-                Log.notice("Attempting WiFi connection");
-                this->_wifiManager->attemptConnection();
-                this->_timeSinceLastConnection = 0;
-            }
-        }
-
         this->_webServer->handleClient();
         this->_nameServer->processNextRequest();
-        MDNS.update();
     }
 };
 

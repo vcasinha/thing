@@ -1,19 +1,19 @@
-#ifndef SWITCH_MODULE_H
-#define SWITCH_MODULE_H
+#ifndef SWITCH_FACTORY
+#define SWITCH_FACTORY
 
 #include <Arduino.h>
-#include "DeviceFactory.h"
+#include "UnitFactory.h"
 #include "Switch.h"
 
-class SwitchFactory : public DeviceFactory
+class SwitchFactory : public UnitFactory
 {
     public:
         SwitchFactory()
         {
-            this->_deviceType = "switch";
+            this->_unitType = "switch";
         }
 
-        virtual Device * makeDevice()
+        virtual Unit * make()
         {
             return new Switch();
         }

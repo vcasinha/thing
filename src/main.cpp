@@ -2,10 +2,9 @@
 #include <ArduinoLog.h>
 
 #include "Application.h"
-#include "DeviceManagerModule.h"
 #include "DHTFactory.h"
 #include "SwitchFactory.h"
-
+#include "UnitManagerModule.h"
 #include "user_settings.h"
 
 Application * app;
@@ -24,7 +23,6 @@ void printNewline(Print *_logOutput)
 
 void setup()
 {
-    DeviceManagerModule * thingsManager;
     //Initialize serial port output
     Serial.begin(serial_port_baud_rate);
     Serial.print("\n\n");
@@ -38,9 +36,9 @@ void setup()
     delay(3000);
     app = new Application(application_name);
     delay(1000);
-    thingsManager = (DeviceManagerModule *)app->getModule("device_manager");
-    thingsManager->addFactory(new DHTFactory());
-    thingsManager->addFactory(new SwitchFactory());
+    UnitManagerModule * manager = (UnitManagerModule *) app->getModule("unit_manager");
+    manager->addFactory(new DHTFactory());
+    manager->addFactory(new SwitchFactory());
     app->setup();
 }
 
