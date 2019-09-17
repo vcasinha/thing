@@ -23,15 +23,15 @@ class TimeModule : public Module
 
         virtual void boot(JsonObject &config)
         {
-            this->_ntpServer = config["server_address"] | "europe.pool.ntp.org";
-            _timeOffset = config["time_offset"] | 3600;
-            _updateInterval = config["update_interval"] | 60000;
+            this->_ntpServer = config["NTPServerAddress"] | "europe.pool.ntp.org";
+            _timeOffset = config["offset"] | 3600;
+            _updateInterval = config["updateIntervalMS"] | 60000;
         }
 
         virtual void setup()
         {
-            Log.notice("(time.boot) Set server to %s offset %u Update Interval %u", _ntpServer.c_str(), _timeOffset, _updateInterval);
-            this->_ntpClient = new NTPClient(_ntpUDP, _ntpServer.c_str(), 0, 60000);
+            Log.notice("(time.boot) Set server to %s offset %lu Update Interval %lu", _ntpServer.c_str(), _timeOffset, _updateInterval);
+            this->_ntpClient = new NTPClient(this->_ntpUDP, this->_ntpServer.c_str(), this->_timeOffset, this->_updateInterval);
             _ntpClient->update();
             Log.notice("(time.boot) The time is: %s", _ntpClient->getFormattedTime().c_str());
         }
