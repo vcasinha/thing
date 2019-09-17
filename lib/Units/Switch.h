@@ -10,7 +10,11 @@ class Switch final : public Unit
     public:
         unsigned int _pin;
         unsigned int _buttonPin;
+        bool _useButton;
         bool _buttonState;
+        bool _triggerButton;
+        bool _invertPin;
+        bool _invertState;
         unsigned int _previousPinState;
 
         Switch()
@@ -23,7 +27,6 @@ class Switch final : public Unit
 
         ~Switch()
         {
-
         }
 
         virtual void deviceConfig(JsonObject &config)
@@ -32,9 +35,18 @@ class Switch final : public Unit
             Log.notice("(switch.construct) Switch on pin %u", this->_pin);
             pinMode(this->_pin, OUTPUT);
 
-            this->_buttonPin = config["buttonPin"];
-            Log.notice("(switch.construct) Linked button on pin %u", this->_pin);
-            pinMode(this->_buttonPin, INPUT);
+            this->_useButton = config["useButton"];
+            if(this->_useButton)
+            {
+                this->_buttonPin = config["buttonPin"];
+                this->_triggerButton = config["triggerButton"];
+                this->_invertPin = config["invertPin"];
+                this->_invertState = config["invertState"];
+
+                pinMode(this->_buttonPin, INPUT);
+
+                Log.notice("(switch.construct) Linked button on pin %u", this->_pin);
+            }
         }
 
         void updateState(bool state)
@@ -59,8 +71,18 @@ class Switch final : public Unit
             unsigned int currentPinState = digitalRead(this->_buttonPin);
             if(currentPinState != this->_previousPinState)
             {
-                this->_buttonState = currentPinState == HIGH;
-                Log.notice("(switch.loop) Button changed to %s", this->_buttonState ? "ON" : "OFF");
+                if(this->_triggerButton)
+                {
+                    this->_buttonState = (currentPinState == HIGH);
+                    Log.notice("(switch.loop) Button changed to %s", this->_buttonState ? "ON" : "OFF");
+                    this->updateState(this->_buttonState);
+                }
+                else if ((currentPinState == HIGH) != this->_invertPin)
+                {
+                    this->_buttonState = !this->_buttonState;
+                    Log.notice("(switch.loop) Button changed to %s", this->_buttonState ? "ON" : "OFF");
+                    this->updateState(this->_buttonState);
+                }
             }
 
             this->_previousPinState = currentPinState;
@@ -69,7 +91,6 @@ class Switch final : public Unit
         virtual void MQTTLoop(unsigned long timestamp, unsigned long delta_time)
         {
             this->publishState(this->_state ? "ON" : "OFF");
-            Log.notice("The time is %lu", timestamp);
         }
 };
 
