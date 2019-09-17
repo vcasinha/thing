@@ -140,13 +140,6 @@ class DeviceModule : public Module
             return status;
         }
 
-        void eraseWiFiSettings()
-        {
-            Log.notice("(Device) Erasing configuration.");
-            ESP.eraseConfig();
-            this->restart();
-        }
-
         void restart()
         {
             Log.notice("(Device) Restarting.");

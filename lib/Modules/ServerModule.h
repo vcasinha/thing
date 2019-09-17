@@ -27,6 +27,7 @@ public:
     StorageModule *_storageModule;
     ESP8266WebServer *_webServer;
     DNSServer *_nameServer;
+    File _uploadFile;
 
     //PersWiFiManager *_wifiManager;
 
@@ -69,17 +70,6 @@ public:
             this->_deviceModule->restart();
         });
 
-        this->_webServer->on("/wifi/reset", HTTP_GET, [this]() {
-            if (!this->isAuthenticated()) {
-                return;
-            }
-
-            Log.notice("(webServer.resetWiFi) WiFi reset requested");
-            this->_webServer->send(200, "application/json", "{\"_status\":\"WiFi Reset (restarting)\"}");
-            this->_webServer->handleClient();
-            this->_deviceModule->eraseWiFiSettings();
-        });
-
         // this->_webServer->on("/update", HTTP_GET, [this]() {
         //     if (!this->isAuthenticated()) {
         //         return;
@@ -101,6 +91,80 @@ public:
         //     this->_webServer->send(state ? 200 : 500, "application/json", response);
         //     this->_webServer->handleClient();
         // });
+        this->_webServer->on("upload", HTTP_POST, [&]() {
+            if (!this->isAuthenticated())
+                return;
+
+            this->_webServer->send(200); }, [&]() {
+            this->processUpload();
+        });
+
+        this->_webServer->on("/file", HTTP_GET, [this]() {
+            if (!this->isAuthenticated())
+            {
+                return;
+            }
+
+            String content_type = "application/json";
+
+            if(!this->_webServer->hasArg("path"))
+            {
+                Log.error("(web) 'path' is required");
+                this->_webServer->send(500, "application/json", "{\"message\":\"'path' is required\"}");
+                return;
+            }
+
+            String path = this->_webServer->arg("path");
+
+            Log.notice("(webServer.configuration.GET) ** Read configuration file '%s'", path.c_str());
+            if (this->_storageModule->exists(path.c_str()) == false)
+            {
+                Log.error("(web) File not found '%s'", path.c_str());
+                this->_webServer->send(400, "application/json", "{\"message\":\"File not found\"}");
+                return;
+            }
+
+            File file = this->_storageModule->getFile(path.c_str(), "r");
+            this->_webServer->streamFile(file, content_type);
+            file.close();
+        });
+
+        this->_webServer->on("/file", HTTP_POST, [&]() {
+            if (!this->isAuthenticated())
+            {
+                return;
+            }
+
+            String content_type = "application/json";
+
+            if (!this->_webServer->hasArg("path"))
+            {
+                Log.error("(web) 'path' is required");
+                this->_webServer->send(500, "application/json", "{\"message\":\"'path' is required\"}");
+                return;
+            }
+
+            String path = this->_webServer->arg("path");
+            Log.notice("(web.configuration.POST) Write file '%s'", path.c_str());
+
+            if (!this->_webServer->hasArg("plain"))
+            {
+                this->_webServer->send(500, "application/json", "{\"message\":\"Body missing\"}");
+                return;
+            }
+
+            String body = this->_webServer->arg("plain");
+
+            if (this->_storageModule->write(path.c_str(), body.c_str()) == false)
+            {
+                this->_webServer->send(500, "application/json", "{\"_status\":\"Could not write\"}");
+                return;
+            }
+
+            this->_webServer->send(200, "application/json", "{\"_status\":\"OK\"}");
+
+            this->_application->updateConfiguration(body.c_str());
+        });
 
         this->_webServer->on("/configuration", HTTP_GET, [this]() {
             if (!this->isAuthenticated()) {
@@ -114,7 +178,7 @@ public:
             if (this->_storageModule->exists(path.c_str()) == false)
             {
                 Log.notice("(Server) ** File not found '%s'", path.c_str());
-                this->_webServer->send(400, "application/json", "{\"_status\":\"File does not exist\"}");
+                this->_webServer->send(400, "application/json", "{\"message\":\"File does not exist\"}");
                 return;
             }
 
@@ -134,7 +198,7 @@ public:
             Log.notice("(web.configuration.POST) ** Write configuration file '%s'", path.c_str());
             if (!this->_webServer->hasArg("plain"))
             {
-                this->_webServer->send(500, "application/json", "{\"_status\":\"Body missing\"}");
+                this->_webServer->send(500, "application/json", "{\"message\":\"Body missing\"}");
                 return;
             }
 
@@ -264,6 +328,43 @@ public:
         }
 
         return authenticated;
+    }
+
+    void processUpload()
+    {
+        HTTPUpload &upload = this->_webServer->upload();
+        if (upload.status == UPLOAD_FILE_START)
+        {
+            String filename = upload.filename;
+            if (!filename.startsWith("/"))
+            {
+                filename = "/" + filename;
+            }
+
+            Serial.print("handleFileUpload Name: ");
+            Serial.println(filename);
+            this->_uploadFile = SPIFFS.open(filename, "w"); // Open the file for writing in SPIFFS (create if it doesn't exist)
+            filename = String();
+        }
+        else if (upload.status == UPLOAD_FILE_WRITE)
+        {
+            if (this->_uploadFile)
+                this->_uploadFile.write(upload.buf, upload.currentSize); // Write the received bytes to the file
+        }
+        else if (upload.status == UPLOAD_FILE_END)
+        {
+            if (this->_uploadFile)
+            {                              // If the file was successfully created
+                this->_uploadFile.close(); // Close the file again
+                Serial.print("handleFileUpload Size: ");
+                Serial.println(upload.totalSize);
+                this->_webServer->send(200, "application/json", "{\"_status\":\"OK\"}");
+            }
+            else
+            {
+                this->_webServer->send(500, "application/json", "{\"_status\":\"Could not write\"}");
+            }
+        }
     }
 
     String getContentType(String filename)

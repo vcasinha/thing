@@ -63,6 +63,10 @@ class WiFiModule : public Module
             this->_serverModule->_nameServer->start((byte)53, "*", apIP);
 
             this->_serverModule->_webServer->on("/wifi/list", [&]() {
+                if (!this->_serverModule->isAuthenticated())
+                {
+                    return;
+                }
                 //scan for wifi networks
                 int n = WiFi.scanNetworks();
 
@@ -98,21 +102,42 @@ class WiFiModule : public Module
             });
 
             this->_serverModule->_webServer->on("/wifi/connect", [&]() {
+                if (!this->_serverModule->isAuthenticated())
+                {
+                    return;
+                }
                 this->_serverModule->_webServer->send(200, "text/html", "connecting...");
                 this->attemptConnection(this->_serverModule->_webServer->arg("n"), this->_serverModule->_webServer->arg("p"));
             });
 
             this->_serverModule->_webServer->on("/wifi/ap", [&]() {
+                if (!this->_serverModule->isAuthenticated())
+                {
+                    return;
+                }
                 this->_serverModule->_webServer->send(200, "text/html", "access point: " + this->_device->_hostname);
                 delay(2000);
                 startApMode();
             });
 
-            this->_serverModule->_webServer->on("/wifi/rst", [&]() {
-                this->_serverModule->_webServer->send(200, "text/html", "Rebooting...");
-                delay(100);
-                ESP.restart();
+            this->_serverModule->_webServer->on("/wifi/reset", HTTP_GET, [&]() {
+                if (!this->_serverModule->isAuthenticated())
+                {
+                    return;
+                }
+
+                Log.notice("(webServer.resetWiFi) WiFi reset requested");
+                this->_serverModule->_webServer->send(200, "application/json", "{\"_status\":\"WiFi Reset (restarting)\"}");
+                this->_serverModule->_webServer->handleClient();
+                this->eraseWiFiSettings();
             });
+        }
+
+        void eraseWiFiSettings()
+        {
+            Log.notice("(Device) Erasing configuration.");
+            ESP.eraseConfig();
+            this->_device->restart();
         }
 
         bool attemptConnection(const String & ssid, const String & password)
@@ -140,25 +165,23 @@ class WiFiModule : public Module
             }
             //if in nonblock mode, skip this loop
             unsigned long connection_start = millis();
-            Log.notice("(wiFiModule.handleWiFi) Attempt connection to %s", WiFi.SSID().c_str());
+            Log.notice("(wiFiModule.attemptConnection) Attempt connection to %s", WiFi.SSID().c_str());
             delay(1000);
             while (WiFi.status() != WL_CONNECTED && (millis() - connection_start) < (1000 * WIFI_CONNECT_TIMEOUT))
             {
-                Log.notice("(wiFiModule.handleWiFi) Retrying connection to SSID %u", (millis() - connection_start) / 1000);
+                Log.notice("(wiFiModule.attemptConnection) Retrying connection to SSID %u", (millis() - connection_start) / 1000);
                 delay(2000);
             }
 
             if ((WiFi.status() == WL_CONNECT_FAILED) || ((WiFi.status() != WL_CONNECTED)))
             {
-                Log.notice("(wiFiModule.handleWiFi) Start AP");
+                Log.notice("(wiFiModule.attemptConnection) Start AP");
                 startApMode();
                 _connectStartTime = 0;
             }
             else
             {
-                Log.notice("(wiFiModule.attemptConnection) #########################################################");
-                Log.notice("(wiFiModule.attemptConnection) ### Connected to %s", WiFi.SSID().c_str());
-                Log.notice("(wiFiModule.attemptConnection) ### Application URL http://%s.local (%s)", this->_device->_hostname.c_str(), WiFi.localIP().toString().c_str());
+                Log.notice("(wiFiModule.attemptConnection) Connected to %s", WiFi.SSID().c_str());
             }
 
             return (WiFi.status() == WL_CONNECTED);
@@ -171,15 +194,14 @@ class WiFiModule : public Module
             IPAddress apIP(192, 168, 1, 1);
             WiFi.mode(WIFI_AP);
             WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-            Log.notice("(wiFiModule.startAPMode) #########################################################");
             if(this->_device->_secure)
             {
-                Log.notice("(wiFiModule.startAPMode) ### Starting Secure AP %s", this->_device->_hostname.c_str());
+                Log.notice("(wiFiModule.startAPMode) Starting Secure AP %s", this->_device->_hostname.c_str());
                 WiFi.softAP(this->_device->_hostname.c_str(), this->_device->_password.c_str());
             }
             else
             {
-                Log.notice("(wiFiModule.startAPMode) ### Starting Public AP %s", this->_device->_hostname.c_str());
+                Log.notice("(wiFiModule.startAPMode) Starting Public AP %s", this->_device->_hostname.c_str());
                 WiFi.softAP(this->_device->_hostname.c_str());
             }
 
