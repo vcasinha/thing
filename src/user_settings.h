@@ -7,7 +7,8 @@
 #define USER_SETTINGS
 #define APP_LOG_LEVEL LOG_LEVEL_VERBOSE
 #define WIFI_CONNECT_TIMEOUT 30
-const char *application_name = "Thing";
+
+const char *application_name = "Units";
 const char *application_version = "1.0rc";
 unsigned int serial_port_baud_rate = 115200;
 

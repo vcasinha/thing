@@ -19,10 +19,10 @@ Application::Application(const char * id)
 
     Log.notice("(application.construct) Flash ID %08X", ESP.getFlashChipId());
     uint32_t realSize = ESP.getFlashChipRealSize();
-    Log.notice("(application.construct) Flash size %u bytes", realSize);
+    Log.notice("(application.construct) Flash size %lu bytes", realSize);
     uint32_t ideSize = ESP.getFlashChipSize();
-    Log.notice("(application.construct) Flash IDE size %u bytes", ideSize);
-    Log.notice("(application.construct) Flash IDE speed %u Hz", ESP.getFlashChipSpeed());
+    Log.notice("(application.construct) Flash IDE size %lu bytes", ideSize);
+    Log.notice("(application.construct) Flash IDE speed %lu Hz", ESP.getFlashChipSpeed());
     FlashMode_t ideMode = ESP.getFlashChipMode();
     Log.notice("(application.construct) Flash IDE mode %s", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
@@ -39,12 +39,12 @@ Application::Application(const char * id)
 
     this->loadModule(new DeviceModule());
     this->loadModule(new StorageModule());
-    this->loadModule(new MQTTModule());
     this->loadModule(new WiFiModule());
-    this->loadModule(new ServerModule());
-    this->loadModule(new UnitManagerModule());
-    this->loadModule(new RFModule());
     this->loadModule(new TimeModule());
+    this->loadModule(new ServerModule());
+    this->loadModule(new MQTTModule());
+    this->loadModule(new RFModule());
+    this->loadModule(new UnitManagerModule());
 }
 
 void Application::loadModule(Module * module)
@@ -168,6 +168,25 @@ void Application::setup(void)
             Log.warning("(application.setup) * Module disabled '%s' *  ", module->_name);
         }
     }
+    String ip_address = WiFi.localIP().toString();
+    DeviceModule *device = (DeviceModule *)this->getModule("device");
+
+    Log.notice("(application.setup) #################################################################################");
+    Log.notice("(application.setup) ### Application ready and running");
+
+    if(WiFi.getMode() == WIFI_STA)
+    {
+        Log.notice("(application.setup) ### Connected to SSID %s", WiFi.SSID().c_str());
+    }
+    else
+    {
+        Log.notice("(application.setup) ### Started %s AP named %s", device->_secure ? "secure" : "public", device->_hostname.c_str());
+    }
+
+    Log.notice("(application.setup) ### HTTP on http://%s.local (%s)", device->_hostname.c_str(), ip_address.c_str());
+    Log.notice("(application.setup) ### WiFi on http://%s.local/hotspot-detect.html", device->_hostname.c_str());
+    Log.notice("(application.setup) ###");
+    Log.notice("(application.setup) #################################################################################");
 }
 
 void Application::updateConfiguration(const char *config_json)

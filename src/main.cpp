@@ -33,9 +33,9 @@ void setup()
     //delay(5000);
     delay(1000);
     Log.notice("Booting %s v%s", application_name, application_version);
-    delay(3000);
+
+    delay(4000);
     app = new Application(application_name);
-    delay(1000);
     UnitManagerModule * manager = (UnitManagerModule *) app->getModule("unit_manager");
     manager->addFactory(new DHTFactory());
     manager->addFactory(new SwitchFactory());
