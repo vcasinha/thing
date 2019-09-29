@@ -3,19 +3,19 @@
 
 #include <Arduino.h>
 #include "UnitFactory.h"
-#include "Switch.h"
+#include "RelayUnit.h"
 
-class SwitchFactory : public UnitFactory
+class RelayFactory : public UnitFactory
 {
     public:
-        SwitchFactory()
+        RelayFactory()
         {
-            this->_unitType = "switch";
+            this->_unitType = "relay";
         }
 
         virtual Unit * make()
         {
-            return new Switch();
+            return new RelayUnit();
         }
 };
 #endif

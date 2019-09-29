@@ -4,14 +4,10 @@
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include "UnitFactory.h"
-//#include "DHTFactory.h"
-//#include "SwitchFactory.h"
-//#include "BlinkFactory.h"
 #include "Module.h"
 #include "MQTTModule.h"
 #include "TimeModule.h"
 #include "Vector.h"
-#include "Switch.h"
 
 class UnitManagerModule : public Module
 {
@@ -83,7 +79,7 @@ class UnitManagerModule : public Module
                         String json_config = "";
                         serializeJson(unit_config, json_config);
                         Log.notice("(unitsManager.config) Update device configuration '%s' ()", unit->_id.c_str(), json_config.c_str());
-                        this->_units[i]->config(unit_config);
+                        this->_units[i]->unitConfig(unit_config);
                     }
                 }
             }
@@ -148,7 +144,7 @@ class UnitManagerModule : public Module
                 unsigned long delta_millis = current_millis - unit->_lastUpdate;
                 if (unit->_updatePeriod == 0 || delta_millis > unit->_updatePeriod)
                 {
-                    unit->loop(current_time, delta_millis);
+                    unit->loop(current_time, current_millis, delta_millis);
                     unit->_lastUpdate = current_millis;
                 }
 

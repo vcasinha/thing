@@ -3,7 +3,8 @@
 
 #include "Application.h"
 #include "DHTFactory.h"
-#include "SwitchFactory.h"
+#include "RelayFactory.h"
+#include "ACS712Factory.h"
 #include "UnitManagerModule.h"
 #include "user_settings.h"
 
@@ -34,11 +35,12 @@ void setup()
     delay(1000);
     Log.notice("Booting %s v%s", application_name, application_version);
 
-    delay(4000);
+    delay(1000);
     app = new Application(application_name);
     UnitManagerModule * manager = (UnitManagerModule *) app->getModule("unit_manager");
     manager->addFactory(new DHTFactory());
-    manager->addFactory(new SwitchFactory());
+    manager->addFactory(new RelayFactory());
+    manager->addFactory(new ACS712Factory());
     app->setup();
 }
 

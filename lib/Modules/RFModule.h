@@ -3,6 +3,7 @@
 #define RFMQTT_RAW 0
 #define RFMQTT_BINARY 1
 #define RFMQTT_TRISTATE 2
+#define RFMQTT_HEX 3
 
 #include <Arduino.h>
 #include <ArduinoLog.h>
@@ -11,19 +12,19 @@
 #include "Module.h"
 #include "MQTTModule.h"
 #include "Vector.h"
-
+// todo Sonoff RF Bridge (ESPURNA https://github.com/xoseperez/espurna/blob/dev/code/espurna/rfbridge.ino)
 class RFModule : public Module
 {
     public:
-        unsigned int _format = RFMQTT_TRISTATE;
+        unsigned int _format = RFMQTT_HEX;
         MQTTModule *_mqtt;
         RCSwitch _driver;
         unsigned int _rx_pin = 0;
         unsigned int _tx_pin = 0;
         bool _updated = false;
-        const char *_value = "";
+        unsigned long _value;
         unsigned int _delay = 500;
-        unsigned int _lastTime = 0;
+        unsigned long _lastTime = 0;
 
         RFModule()
         {
@@ -46,6 +47,9 @@ class RFModule : public Module
 
         virtual void loop(unsigned long delta_time)
         {
+            char payload[128] = "TRIGGER";
+            char topic[100];
+
             if (this->_driver.available())
             {
                 this->_updated = true;
@@ -56,46 +60,41 @@ class RFModule : public Module
 
                 this->_driver.resetAvailable();
                 StaticJsonDocument<256> jsonBuffer;
-                JsonObject root = jsonBuffer.to<JsonObject>();
+                JsonObject json_object = jsonBuffer.to<JsonObject>();
 
                 const char *id = dec2binWzerofill(value, bit_length);
                 const char *tristate = bin2tristate(id);
-                unsigned int current = millis();
+                unsigned long current = millis();
 
-                if (strcmp(tristate, this->_value) == 0 && current < this->_lastTime + this->_delay)
+                if (value == this->_value && current < this->_lastTime + this->_delay)
                 {
-                    Log.notice("(RF.loop) Ignoring repetition...");
+                    this->_lastTime = current;
+                        Log.notice("(RF.loop) Ignoring repetition...");
                     return;
                 }
 
-                Log.notice("(RF.loop) Received: %ld %s %s", value, id, tristate);
+                json_object["element_id"] = this->_application->_id;
 
-                root["element_id"] = this->_application->_id;
-                root["id"] = id;
-                root["protocol"] = protocol;
-                root["delay"] = delay;
-                root["bit_length"] = bit_length;
-                root["tristate"] = tristate;
+                json_object["id"] = id;
+                json_object["protocol"] = protocol;
+                json_object["delay"] = delay;
+                json_object["bit_length"] = bit_length;
+                json_object["tristate"] = tristate;
 
-                char payload[512];
-                char topic[100];
-
-                serializeJson(root, payload);
-                sprintf(topic, "home/switch/rf/%.11s/state", tristate);
-                // if (id[23] == '0')
-                // {
-                //     strcpy(payload, "OFF");
-                // }
-                // else
-                // {
-                //     strcpy(payload, "ON");
-                // }
-
-                strcpy(payload, tristate);
+                if(tristate != NULL)
+                {
+                    Log.notice("(RF.loop) Received Tri state(%s): - %X", tristate, value);
+                    sprintf(topic, "home/switch/rf/%.11s/state", tristate);
+                }
+                else
+                {
+                    Log.notice("(RF.loop) Received: %X", value);
+                    sprintf(topic, "home/switch/rf/%06lX/state", value);
+                }
 
                 this->_mqtt->publish(topic, payload);
 
-                this->_value = tristate;
+                this->_value = value;
                 this->_lastTime = current;
             }
         }
@@ -149,7 +148,7 @@ class RFModule : public Module
                 }
                 else
                 {
-                    return "not applicable";
+                    return NULL;
                 }
                 pos = pos + 2;
                 pos2++;

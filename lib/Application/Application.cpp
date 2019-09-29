@@ -19,13 +19,14 @@ Application::Application(const char * id)
 
     Log.notice("(application.construct) Flash ID %08X", ESP.getFlashChipId());
     uint32_t realSize = ESP.getFlashChipRealSize();
-    Log.notice("(application.construct) Flash size %lu bytes", realSize);
+    Log.notice("(application.construct) Flash size %l bytes", realSize);
     uint32_t ideSize = ESP.getFlashChipSize();
-    Log.notice("(application.construct) Flash IDE size %lu bytes", ideSize);
-    Log.notice("(application.construct) Flash IDE speed %lu Hz", ESP.getFlashChipSpeed());
+    Log.notice("(application.construct) Flash IDE size %l bytes", ideSize);
+    Log.notice("(application.construct) Flash IDE speed %lHz", ESP.getFlashChipSpeed());
+    Log.notice("(application.construct) CPU Frequency %lMHz", ESP.getCpuFreqMHz());
     FlashMode_t ideMode = ESP.getFlashChipMode();
     Log.notice("(application.construct) Flash IDE mode %s", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
-
+    delay(3000);
     if (ideSize != realSize)
     {
         Log.notice("(application.construct) Flash Chip configuration wrong! ");
@@ -73,7 +74,7 @@ Module * Application::getModule(const char * name)
 
 void Application::setup(void)
 {
-    DynamicJsonDocument JSONDoc(1024);
+    DynamicJsonDocument JSONDoc(2048);
     char filename[100];
     File file;
     String config_json, default_config = "{\"mqtt\":{\"hostname\":\"petitmaison.duckdns.org\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"}}";
@@ -187,44 +188,6 @@ void Application::setup(void)
     Log.notice("(application.setup) ### WiFi on http://%s.local/hotspot-detect.html", device->_hostname.c_str());
     Log.notice("(application.setup) ###");
     Log.notice("(application.setup) #################################################################################");
-}
-
-void Application::updateConfiguration(const char *config_json)
-{
-    DynamicJsonDocument JSONDoc(1024);
-    auto error = deserializeJson(JSONDoc, config_json);
-    if(error)
-    {
-        Log.notice("(app.updateConfiguration) Parse JSON error");
-        return;
-    }
-
-    for (unsigned int i = 0; i < this->_modules.size(); i++)
-    {
-        //Module * module = this->getModule(name);
-        Module * module = this->_modules[i];
-        if (module == NULL)
-        {
-            continue;
-        }
-
-        JsonObject module_config = JSONDoc[module->_name];
-        bool disabled = false;
-        if (module_config.containsKey("disable"))
-        {
-            disabled = module_config["disable"];
-        }
-
-        if (disabled == false)
-        {
-            module->config(module_config);
-        }
-        else
-        {
-            Log.notice("(application.updateConfiguration) * Module '%s' disabled ", module->_name);
-            module->_enabled = false;
-        }
-    }
 }
 
 void Application::loop(void)

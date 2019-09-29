@@ -1,6 +1,14 @@
 {
     "device": {
-        "location": "office"
+        "name": "testio",
+        "location": "office",
+        "password": "test1234",
+        "secure": false
+    },
+    "time": {
+        "offset": 3600,
+        "updateIntervalMS": 60000,
+        "NTPServerAddress": "europe.pool.ntp.org"
     },
     "mqtt": {
         "hostname": "petitmaison.duckdns.org",
@@ -8,7 +16,34 @@
         "password": "mqtt",
         "root_topic": "home"
     },
-    "device_manager": {
-        "devices": {}
+    "rf": {
+        "disable": false,
+        "receive_pin": 14,
+        "transmit_pin": 12
+    },
+    "unit_manager": {
+        "units": {
+            "dht": {
+                "type": "dht",
+                "id": "dht",
+                "location": "office",
+                "pin": 2
+            },
+            "switch": {
+                "id": "switch",
+                "location": "nowhere",
+                "type": "switch",
+                "pin": 13,
+                "useButton": true,
+                "buttonPin": 0,
+                "invertPin": true
+            },
+            "meter": {
+                "type": "power_meter",
+                "id": "meter",
+                "_mVPerAmp": "100",
+                "location": "office"
+            }
+        }
     }
 }

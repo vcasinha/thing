@@ -5,7 +5,7 @@
 #include <ArduinoLog.h>
 #include "Unit.h"
 
-class Switch final : public Unit
+class RelayUnit final : public Unit
 {
     public:
         unsigned int _pin;
@@ -17,22 +17,22 @@ class Switch final : public Unit
         bool _invertState;
         unsigned int _previousPinState;
 
-        Switch()
+        RelayUnit()
         {
-            this->_type = "switch";
+            this->_type = "relay";
             this->_updatePeriod = 100;
             this->_MQTTUpdatePeriod = 30;
-            Log.notice("(switch.construct) Update period %u", this->_updatePeriod);
+            Log.notice("(relay.construct) Update period %u", this->_updatePeriod);
         }
 
-        ~Switch()
+        ~RelayUnit()
         {
         }
 
-        virtual void deviceConfig(JsonObject &config)
+        virtual void config(JsonObject & config)
         {
             this->_pin = config["pin"];
-            Log.notice("(switch.construct) Switch on pin %u", this->_pin);
+            Log.notice("(relay.construct) Switch on pin %u", this->_pin);
             pinMode(this->_pin, OUTPUT);
 
             this->_useButton = config["useButton"];
@@ -45,7 +45,7 @@ class Switch final : public Unit
 
                 pinMode(this->_buttonPin, INPUT);
 
-                Log.notice("(switch.construct) Linked button on pin %u", this->_pin);
+                Log.notice("(relay.construct) Linked button on pin %u", this->_pin);
             }
         }
 
@@ -66,7 +66,7 @@ class Switch final : public Unit
             Serial.printf("Change switch %s state to %s\n", this->_id.c_str(), this->_state ? "ON" : "OFF");
         }
 
-        virtual void loop(unsigned long time, unsigned long delta_millis)
+        virtual void loop(unsigned long time, unsigned long time_millis, unsigned long delta_millis)
         {
             unsigned int currentPinState = digitalRead(this->_buttonPin);
             if(currentPinState != this->_previousPinState)
@@ -74,13 +74,13 @@ class Switch final : public Unit
                 if(this->_triggerButton)
                 {
                     this->_buttonState = (currentPinState == HIGH);
-                    Log.notice("(switch.loop) Button changed to %s", this->_buttonState ? "ON" : "OFF");
+                    Log.notice("(relay.loop) Button changed to %s", this->_buttonState ? "ON" : "OFF");
                     this->updateState(this->_buttonState);
                 }
                 else if ((currentPinState == HIGH) != this->_invertPin)
                 {
                     this->_buttonState = !this->_buttonState;
-                    Log.notice("(switch.loop) Button changed to %s", this->_buttonState ? "ON" : "OFF");
+                    Log.notice("(relay.loop) Button changed to %s", this->_buttonState ? "ON" : "OFF");
                     this->updateState(this->_buttonState);
                 }
             }

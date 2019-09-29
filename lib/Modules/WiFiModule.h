@@ -107,7 +107,7 @@ class WiFiModule : public Module
                     return;
                 }
                 this->_serverModule->_webServer->send(200, "text/html", "connecting...");
-                this->attemptConnection(this->_serverModule->_webServer->arg("n"), this->_serverModule->_webServer->arg("p"));
+                this->attemptConnection(this->_serverModule->_webServer->arg("ssid"), this->_serverModule->_webServer->arg("password"));
             });
 
             this->_serverModule->_webServer->on("/wifi/ap", [&]() {
