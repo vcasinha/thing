@@ -94,8 +94,7 @@ public:
         json["temperature"] = this->_temperature;
         json["humidity"] = this->_humidity;
 
-        serializeJson(buffer, state);
-        this->publishState(state.c_str());
+        this->publishState(buffer);
     }
 };
 

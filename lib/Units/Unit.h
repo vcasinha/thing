@@ -71,6 +71,13 @@ public:
         this->_mqtt->publish(this->_stateTopic, payload);
     }
 
+    void publishState(DynamicJsonDocument json_document)
+    {
+        String state;
+        serializeJson(json_document, state);
+        this->_mqtt->publish(this->_stateTopic, state.c_str());
+    }
+
     void publishAvailability(const char *payload)
     {
         this->_mqtt->publish(this->_availabilityTopic, payload);
@@ -115,7 +122,7 @@ public:
         Log.notice("(device.boot) Booting as %s@%s (%s)", this->_id.c_str(), this->_location.c_str(), this->_type.c_str());
     }
 
-    virtual void config(JsonObject & config)
+    virtual void unitConfig(JsonObject & config)
     {
         if (config.containsKey("use_frequency"))
         {
@@ -132,13 +139,13 @@ public:
             this->setPeriod(config["period"].as<int>());
         }
 
-        this->deviceConfig(config);
+        this->config(config);
     }
 
     virtual void onCommand(String) {}
-    virtual void deviceConfig(JsonObject &config) {}
+    virtual void config(JsonObject &config) {}
     virtual void setup() {}
-    virtual void loop(unsigned long, unsigned long) {}
+    virtual void loop(unsigned long, unsigned long,  unsigned long) {}
     virtual void MQTTLoop(unsigned long, unsigned long) {}
 };
 

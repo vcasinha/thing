@@ -162,8 +162,6 @@ public:
             }
 
             this->_webServer->send(200, "application/json", "{\"_status\":\"OK\"}");
-
-            this->_application->updateConfiguration(body.c_str());
         });
 
         this->_webServer->on("/configuration", HTTP_GET, [this]() {
@@ -212,7 +210,7 @@ public:
 
             this->_webServer->send(200, "application/json", "{\"_status\":\"OK\"}");
 
-            this->_application->updateConfiguration(body.c_str());
+            //this->_application->updateConfiguration(body.c_str());
         });
 
         this->_webServer->on("/list", HTTP_GET, [this]() {

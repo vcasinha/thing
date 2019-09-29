@@ -7,7 +7,7 @@
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoLog.h>
-//#include <ESP8266httpUpdate.h>
+#include <ESP8266httpUpdate.h>
 #include "Module.h"
 
 class DeviceModule : public Module
@@ -108,34 +108,34 @@ class DeviceModule : public Module
         bool update(String filename)
         {
             bool status = false;
-            // String uri = "/local/";
+            String uri = "/local/";
 
-            // WiFiClient client;
+            WiFiClient client;
 
-            // uri.concat(filename);
-            // String hostname = "petitmaison.duckdns.org";
-            // unsigned int port = 8123;
-            // Log.notice("(Device) Update from https://%s:%d%s", hostname.c_str(), port, uri.c_str());
+            uri.concat(filename);
+            String hostname = "petitmaison.duckdns.org";
+            unsigned int port = 8123;
+            Log.notice("(Device) Update from https://%s:%d%s", hostname.c_str(), port, uri.c_str());
 
-            // ESPhttpUpdate.rebootOnUpdate(false);
-            // delay(500);
+            ESPhttpUpdate.rebootOnUpdate(false);
+            delay(500);
 
-            // t_httpUpdate_return ret = ESPhttpUpdate.update(client, uri, "");
-            // switch (ret)
-            // {
-            // case HTTP_UPDATE_FAILED:
-            //     Log.notice("(Device) Update Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            //     break;
+            t_httpUpdate_return ret = ESPhttpUpdate.update(client, uri, "");
+            switch (ret)
+            {
+            case HTTP_UPDATE_FAILED:
+                Log.notice("(Device) Update Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+                break;
 
-            // case HTTP_UPDATE_NO_UPDATES:
-            //     Log.notice("(Device) Update ignored");
-            //     break;
+            case HTTP_UPDATE_NO_UPDATES:
+                Log.notice("(Device) Update ignored");
+                break;
 
-            // case HTTP_UPDATE_OK:
-            //     status = true;
-            //     Log.notice("(Device) HTTP update done");
-            //     break;
-            // }
+            case HTTP_UPDATE_OK:
+                status = true;
+                Log.notice("(Device) HTTP update done");
+                break;
+            }
 
             return status;
         }
