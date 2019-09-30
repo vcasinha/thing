@@ -19,14 +19,7 @@ class RelayUnit final : public Unit
 
         RelayUnit()
         {
-            this->_type = "relay";
-            this->_updatePeriod = 100;
-            this->_MQTTUpdatePeriod = 30;
-            Log.notice("(relay.construct) Update period %u", this->_updatePeriod);
-        }
-
-        ~RelayUnit()
-        {
+            this->init("relay", 100, 60);
         }
 
         virtual void config(JsonObject & config)
@@ -66,7 +59,7 @@ class RelayUnit final : public Unit
             Serial.printf("Change switch %s state to %s\n", this->_id.c_str(), this->_state ? "ON" : "OFF");
         }
 
-        virtual void loop(unsigned long time, unsigned long time_millis, unsigned long delta_millis)
+        virtual void loop()
         {
             unsigned int currentPinState = digitalRead(this->_buttonPin);
             if(currentPinState != this->_previousPinState)
@@ -88,7 +81,7 @@ class RelayUnit final : public Unit
             this->_previousPinState = currentPinState;
         }
 
-        virtual void MQTTLoop(unsigned long timestamp, unsigned long delta_time)
+        virtual void MQTTLoop()
         {
             this->publishState(this->_state ? "ON" : "OFF");
         }

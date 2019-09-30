@@ -136,7 +136,7 @@ void Application::setup(void)
         else
         {
             disabled = module_config["disable"] | false;
-            module->_loop_period_ms = module_config["update_period"] | module->_loop_period_ms;
+            module->_loop_period_ms = module_config["loop_period_ms"] | module->_loop_period_ms;
         }
 
         if (disabled == false)
@@ -162,6 +162,7 @@ void Application::setup(void)
         {
             Log.notice("(application.setup) * Setting up module '%s' *  ", module->_name);
             module->setup();
+            module->ready();
             delay(100);
         }
         else
@@ -188,24 +189,4 @@ void Application::setup(void)
     Log.notice("(application.setup) ### WiFi on http://%s.local/hotspot-detect.html", device->_hostname.c_str());
     Log.notice("(application.setup) ###");
     Log.notice("(application.setup) #################################################################################");
-}
-
-void Application::loop(void)
-{
-    for(unsigned int c = 0;c < this->_modules.size();c++)
-    {
-        Module * module = (Module *) this->_modules[c];
-        if(module->_enabled == true)
-        {
-            unsigned long current_time = millis() + module->_loop_period_ms;
-            unsigned long delta_time = (current_time - module->_loop_time);
-            //Only call module with desired frequency
-            if (module->_loop_period_ms == 0 || delta_time > module->_loop_period_ms)
-            {
-                module->loop(delta_time);
-                module->_loop_time = current_time;
-                delay(1);
-            }
-        }
-    }
 }

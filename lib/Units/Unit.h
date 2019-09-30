@@ -3,6 +3,7 @@
 #include <ArduinoLog.h>
 #include <Arduino.h>
 #include "MQTTModule.h"
+#include <Ticker.h>
 
 class Unit
 {
@@ -13,13 +14,13 @@ public:
     MQTTModule *_mqtt;
     String _id;
     String _location;
-    String _type;
-    bool _useFrequency = false;
+    const char * _type;
 
-    unsigned int _lastUpdate = 0;
-    unsigned int _updatePeriod = 60000;
-    unsigned long _MQTTUpdatePeriod = 60;
-    unsigned long _previousMQTTUpdate = 0;
+    unsigned long _loop_period_ms = 1000;
+    float _MQTTUpdatePeriod = 60;
+
+    Ticker * _mqttTicker;
+    Ticker * _loopTicker;
 
     char _commandTopic[100];
     char _availabilityTopic[100];
@@ -29,36 +30,27 @@ public:
     Unit()
     {
         this->_type = "unit";
+        this->_mqttTicker = new Ticker();
+        this->_loopTicker = new Ticker();
     }
 
-    virtual ~Unit()
+    void init(const char * type, unsigned long loop_period_ms = 1000, float mqtt_period = 60)
     {
+        this->_type = type;
+        this->_loop_period_ms = loop_period_ms;
+        this->_MQTTUpdatePeriod = mqtt_period;
     }
 
-    void setFrequency(unsigned int frequency)
+    void ready(MQTTModule *mqtt)
     {
-        if (this->_useFrequency)
-        {
-            Log.notice("(device.setFrequency) '%s' set frequency to %d", this->_id.c_str(), frequency);
-            this->_updateFrequency = frequency;
-            if (frequency == 0)
-            {
-                this->_updatePeriod = 0;
-            }
-            else
-            {
-                this->_updatePeriod = (1000 / frequency);
-            }
-        }
-    }
+        this->setMQTT(mqtt);
+        this->_mqttTicker->attach_scheduled(this->_MQTTUpdatePeriod, [&](){
+            this->MQTTLoop();
+        });
 
-    void setPeriod(unsigned int period)
-    {
-        if (!this->_useFrequency)
-        {
-            Log.notice("(device.setPeriod) '%s' set period to %d", this->_id.c_str(), period);
-            this->_updatePeriod = period;
-        }
+        this->_loopTicker->attach_scheduled(this->_loop_period_ms, [&](){
+            this->loop();
+        });
     }
 
     void publish(const char *topic, const char *payload)
@@ -94,9 +86,9 @@ public:
     {
         //Serial.printf("(DEVICE.setMQTT) %s (%s) on %s", this->_id.c_str(), this->_type.c_str(), this->_location.c_str());
         this->_mqtt = mqtt;
-        this->_mqtt->makeTopic(this->_commandTopic, this->_type.c_str(), this->_location.c_str(), this->_id.c_str(), "command");
-        this->_mqtt->makeTopic(this->_stateTopic, this->_type.c_str(), this->_location.c_str(), this->_id.c_str(), "state");
-        this->_mqtt->makeTopic(this->_availabilityTopic, this->_type.c_str(), this->_location.c_str(), this->_id.c_str(), "available");
+        this->_mqtt->makeTopic(this->_commandTopic, this->_type, this->_location.c_str(), this->_id.c_str(), "command");
+        this->_mqtt->makeTopic(this->_stateTopic, this->_type, this->_location.c_str(), this->_id.c_str(), "state");
+        this->_mqtt->makeTopic(this->_availabilityTopic, this->_type, this->_location.c_str(), this->_id.c_str(), "available");
         this->_mqtt->subscribe(this->_commandTopic);
 
         this->setup();
@@ -116,37 +108,23 @@ public:
         this->_id = config["id"].as<String>();
         this->_state = config["state"].as<bool>() | false;
         this->_location = config["location"] | "unknown";
-        this->setPeriod(this->_updatePeriod);
+        this->_loop_period_ms = config["loop_period_ms"] | this->_loop_period_ms;
+        this->_MQTTUpdatePeriod = config["mqtt_update_period"] | this->_MQTTUpdatePeriod;
         this->config(config);
 
-        Log.notice("(device.boot) Booting as %s@%s (%s)", this->_id.c_str(), this->_location.c_str(), this->_type.c_str());
+        Log.notice("(device.boot) Booting as %s@%s (%s)", this->_id.c_str(), this->_location.c_str(), this->_type);
     }
 
     virtual void unitConfig(JsonObject & config)
     {
-        if (config.containsKey("use_frequency"))
-        {
-            this->_useFrequency = config["use_frequency"].as<bool>();
-        }
-
-        if (config.containsKey("frequency"))
-        {
-            this->setFrequency(config["frequency"].as<int>());
-        }
-
-        if (config.containsKey("period"))
-        {
-            this->setPeriod(config["period"].as<int>());
-        }
-
         this->config(config);
     }
 
     virtual void onCommand(String) {}
     virtual void config(JsonObject &config) {}
     virtual void setup() {}
-    virtual void loop(unsigned long, unsigned long,  unsigned long) {}
-    virtual void MQTTLoop(unsigned long, unsigned long) {}
+    virtual void loop() {}
+    virtual void MQTTLoop() {}
 };
 
 #endif

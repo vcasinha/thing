@@ -27,7 +27,7 @@ class MQTTModule : public Module
 
         MQTTModule()
         {
-            this->_name = "mqtt";
+            this->init("mqtt");
         }
 
         ~MQTTModule()

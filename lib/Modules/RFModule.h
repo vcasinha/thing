@@ -28,8 +28,7 @@ class RFModule : public Module
 
         RFModule()
         {
-            this->_name = "rf";
-            this->_loop_period_ms = 100;
+            this->init("rf", 100);
         }
 
         virtual void boot(JsonObject &config)

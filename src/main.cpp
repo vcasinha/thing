@@ -35,17 +35,15 @@ void setup()
     delay(1000);
     Log.notice("Booting %s v%s", application_name, application_version);
 
+    UnitManagerModule::addFactory(new DHTFactory());
+    UnitManagerModule::addFactory(new RelayFactory());
+    UnitManagerModule::addFactory(new ACS712Factory());
+
     delay(1000);
     app = new Application(application_name);
-    UnitManagerModule * manager = (UnitManagerModule *) app->getModule("unit_manager");
-    manager->addFactory(new DHTFactory());
-    manager->addFactory(new RelayFactory());
-    manager->addFactory(new ACS712Factory());
     app->setup();
 }
 
 void loop(void)
 {
-    app->loop();
-    delay(10);
 }

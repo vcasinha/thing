@@ -19,10 +19,7 @@ public:
 
     ACS712Unit()
     {
-        this->_type = "sensor";
-        this->_updatePeriod = 5000;
-        this->_MQTTUpdatePeriod = 60;
-        Log.notice("(switch.construct) Update period %u", this->_updatePeriod);
+        this->init("sensor", 5000, 60);
     }
 
     ~ACS712Unit()
@@ -70,24 +67,24 @@ public:
         return result;
     }
 
-    virtual void loop(unsigned long time, unsigned long time_millis, unsigned long delta_millis)
-    {
-        float Vpp = getVPP() - this->_calibration;
-        float vRMS = (Vpp / 2.0) * 0.707; //root 2 is 0.707
-        float Arms = (vRMS * 1000) / this->_mVPerAmp;
-        float power = Arms * this->_supplyVoltage;
-        if(power < 0)
-        {
-            power = 0;
-        }
-        this->_wattHour += power * (delta_millis / 3600000.0);
-        this->_totalCost = this->_wattHour * (this->_pricePerKWH / 1000);
+    // virtual void loop(unsigned long time, unsigned long time_millis, unsigned long delta_millis)
+    // {
+    //     float Vpp = getVPP() - this->_calibration;
+    //     float vRMS = (Vpp / 2.0) * 0.707; //root 2 is 0.707
+    //     float Arms = (vRMS * 1000) / this->_mVPerAmp;
+    //     float power = Arms * this->_supplyVoltage;
+    //     if(power < 0)
+    //     {
+    //         power = 0;
+    //     }
+    //     this->_wattHour += power * (delta_millis / 3600000.0);
+    //     this->_totalCost = this->_wattHour * (this->_pricePerKWH / 1000);
 
-        Log.notice("I(RMS): %sA Power: %sW Consumption: %sKWh Cost: %s€", String(Arms, 3).c_str(),
-            String(power, 3).c_str(), String(this->_wattHour/1000, 3).c_str(), String(this->_totalCost, 2).c_str());
-    }
+    //     Log.notice("I(RMS): %sA Power: %sW Consumption: %sKWh Cost: %s€", String(Arms, 3).c_str(),
+    //         String(power, 3).c_str(), String(this->_wattHour/1000, 3).c_str(), String(this->_totalCost, 2).c_str());
+    // }
 
-    virtual void MQTTLoop(unsigned long timestamp, unsigned long delta_time)
+    virtual void MQTTLoop()
     {
         DynamicJsonDocument json_document(512);
         JsonObject json = json_document.to<JsonObject>();
