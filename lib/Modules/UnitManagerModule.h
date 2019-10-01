@@ -1,14 +1,15 @@
-#ifndef DEVICEMANAGER_MODULE_H
-#define DEVICEMANAGER_MODULE_H
+#ifndef UNIT_MANAGER_MODULE_H
+#define UNIT_MANAGER_MODULE_H
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
-#include "UnitFactory.h"
 #include "Module.h"
 #include "MQTTModule.h"
 #include "TimeModule.h"
 #include "Vector.h"
+#include "UnitFactory.h"
+#include "Unit.h"
 
 class UnitManagerModule : public Module
 {
@@ -24,6 +25,19 @@ class UnitManagerModule : public Module
         {
             Log.notice("(unitManagerModule.addFactory) Load '%s' factory", factory->_unitType.c_str());
             _factories.push(factory);
+        }
+
+        Unit * getUnitByID(String id)
+        {
+            for (unsigned int i = 0; i < this->_units.size(); i++)
+            {
+                if(this->_units[i]->_id.equals(id))
+                {
+                    return this->_units[i];
+                }
+            }
+
+            return NULL;
         }
 
         static UnitFactory *getFactory(String unit_type)

@@ -18,7 +18,7 @@ void UnitManagerModule::makeUnit(JsonObject config)
     if(factory)
     {
         Unit *unit = factory->make();
-        unit->boot(config);
+        unit->boot(this->_application, config);
         this->_units.push(unit);
     }
     else
@@ -79,7 +79,8 @@ void UnitManagerModule::setup(void)
     //Log.notice("Setup devices");
     for (unsigned int i = 0; i < this->_units.size(); i++)
     {
-        this->_units[i]->ready(this->_mqtt);
+        Unit *unit = this->_units[i];
+        unit->ready();
     }
 }
 

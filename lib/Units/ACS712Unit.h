@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoLog.h>
+#include "TimeModule.h"
 #include "Unit.h"
 
 class ACS712Unit final : public Unit
@@ -10,6 +11,8 @@ class ACS712Unit final : public Unit
 public:
     unsigned int _pin;
     unsigned int _mVPerAmp = 185; // 185mV/A for 5A, 100 mV/A for 20A and 66mV/A for 30A Module
+    unsigned long _previousTime;
+    TimeModule * _time;
     float _calibration = 0; // V2 slider calibrates this
     float _referenceVCC = 3.3;
     float _pricePerKWH = 0.9;
@@ -19,7 +22,7 @@ public:
 
     ACS712Unit()
     {
-        this->init("sensor", 5000, 60);
+        this->init("sensor", 60, 5000);
     }
 
     ~ACS712Unit()
@@ -28,6 +31,8 @@ public:
 
     virtual void config(JsonObject &config)
     {
+        this->_time = (TimeModule *)this->_application->getModule("time");
+        this->_previousTime = this->_time->getTimestamp();
         this->_pin = config["pin"] | A0;
         this->_mVPerAmp = config["_mVPerAmp"] | 185;
         this->_referenceVCC = config["referenceVCC"] | 5;
@@ -67,22 +72,25 @@ public:
         return result;
     }
 
-    // virtual void loop(unsigned long time, unsigned long time_millis, unsigned long delta_millis)
-    // {
-    //     float Vpp = getVPP() - this->_calibration;
-    //     float vRMS = (Vpp / 2.0) * 0.707; //root 2 is 0.707
-    //     float Arms = (vRMS * 1000) / this->_mVPerAmp;
-    //     float power = Arms * this->_supplyVoltage;
-    //     if(power < 0)
-    //     {
-    //         power = 0;
-    //     }
-    //     this->_wattHour += power * (delta_millis / 3600000.0);
-    //     this->_totalCost = this->_wattHour * (this->_pricePerKWH / 1000);
+    virtual void loop()
+    {
+        unsigned long current_time = this->_time->getTimestamp();
+        float Vpp = getVPP() - this->_calibration;
+        float vRMS = (Vpp / 2.0) * 0.707; //root 2 is 0.707
+        float Arms = (vRMS * 1000) / this->_mVPerAmp;
+        float power = Arms * this->_supplyVoltage;
+        if(power < 0)
+        {
+            power = 0;
+        }
+        this->_wattHour += power * (current_time - this->_previousTime) / 3600.0;
+        this->_totalCost = this->_wattHour * (this->_pricePerKWH / 1000);
 
-    //     Log.notice("I(RMS): %sA Power: %sW Consumption: %sKWh Cost: %s€", String(Arms, 3).c_str(),
-    //         String(power, 3).c_str(), String(this->_wattHour/1000, 3).c_str(), String(this->_totalCost, 2).c_str());
-    // }
+        this->_previousTime = current_time;
+
+        Log.notice("I(RMS): %sA Power: %sW Consumption: %sKWh Cost: %s€", String(Arms, 3).c_str(),
+            String(power, 3).c_str(), String(this->_wattHour/1000, 3).c_str(), String(this->_totalCost, 2).c_str());
+    }
 
     virtual void MQTTLoop()
     {
