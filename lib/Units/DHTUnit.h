@@ -1,5 +1,5 @@
-#ifndef DHTDEVICE_H
-#define DHTDEVICE_H
+#ifndef DHT_UNIT_H
+#define DHT_UNIT_H
 
 #include <Arduino.h>
 #include <ArduinoLog.h>
@@ -21,6 +21,7 @@ public:
     DHTUnit()
     {
         this->_type = "sensor";
+        this->init("sensor", 60);
     }
 
     virtual void config(JsonObject &config)

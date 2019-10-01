@@ -1,5 +1,5 @@
-#ifndef DEVICE_H
-#define DEVICE_H
+#ifndef UNIT_H
+#define UNIT_H
 #include <ArduinoLog.h>
 #include <Arduino.h>
 #include "MQTTModule.h"
@@ -10,14 +10,15 @@ protected:
     unsigned int _updateFrequency = 1;
 
 public:
+    Application *_application;
     MQTTModule *_mqtt;
     String _id;
     String _location;
     String _type;
     bool _useFrequency = false;
 
-    unsigned int _lastUpdate = 0;
-    unsigned int _updatePeriod = 60000;
+    unsigned long _lastUpdate = 0;
+    unsigned long _updatePeriod = 60000;
     unsigned long _MQTTUpdatePeriod = 60;
     unsigned long _previousMQTTUpdate = 0;
 
@@ -33,6 +34,13 @@ public:
 
     virtual ~Unit()
     {
+    }
+
+    void init(const char *type, float mqtt_period = 60, unsigned long loop_period_ms = 0)
+    {
+        this->_type = type;
+        this->_updatePeriod = loop_period_ms;
+        this->_MQTTUpdatePeriod = mqtt_period;
     }
 
     void setFrequency(unsigned int frequency)
@@ -142,6 +150,17 @@ public:
         this->config(config);
     }
 
+    void boot(Application *app, JsonObject &config);
+    void ready();
+    Unit * getUnitByID(String unitID);
+    void publish(const char *topic, const char *payload);
+    void publishState(const char *payload);
+    void publishState(DynamicJsonDocument json_document);
+    void publishAvailability(const char *payload);
+    void setState(bool state);
+    void callback(String topic, String payload);
+
+    virtual void trigger() {}
     virtual void onCommand(String) {}
     virtual void config(JsonObject &config) {}
     virtual void setup() {}

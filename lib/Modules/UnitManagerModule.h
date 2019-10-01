@@ -1,13 +1,14 @@
-#ifndef DEVICEMANAGER_MODULE_H
-#define DEVICEMANAGER_MODULE_H
+#ifndef UNIT_MANAGER_MODULE_H
+#define UNIT_MANAGER_MODULE_H
 
 #include <Arduino.h>
 #include <ArduinoLog.h>
-#include "UnitFactory.h"
 #include "Module.h"
 #include "MQTTModule.h"
 #include "TimeModule.h"
 #include "Vector.h"
+#include "UnitFactory.h"
+#include "Unit.h"
 
 class UnitManagerModule : public Module
 {
