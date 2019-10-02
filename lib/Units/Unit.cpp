@@ -30,7 +30,7 @@ void Unit::ready()
         });
     }
 
-    if (this->_loop_period_ms)
+    if (this->_loop_period_ms > 0)
     {
         this->_loopTicker->attach_scheduled(this->_loop_period_ms, [&]() {
             this->loop();

@@ -1,3 +1,4 @@
+#include "user_settings.h"
 #include <Arduino.h>
 #include <ArduinoLog.h>
 
@@ -6,7 +7,6 @@
 #include "RelayFactory.h"
 #include "ACS712Factory.h"
 #include "UnitManagerModule.h"
-#include "user_settings.h"
 
 Application * app;
 
