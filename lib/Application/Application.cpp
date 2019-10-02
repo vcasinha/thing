@@ -6,7 +6,11 @@
 #include "MQTTModule.h"
 #include "DeviceModule.h"
 #include "StorageModule.h"
+
+#ifdef RFMODULE_SUPPORT
 #include "RFModule.h"
+#endif
+
 #include "PersWiFiManager.h"
 #include "ServerModule.h"
 #include "TimeModule.h"
@@ -44,7 +48,11 @@ Application::Application(const char * id)
     this->loadModule(new TimeModule());
     this->loadModule(new ServerModule());
     this->loadModule(new MQTTModule());
+
+    #ifdef RFMODULE_SUPPORT
     this->loadModule(new RFModule());
+    #endif
+
     this->loadModule(new UnitManagerModule());
 }
 

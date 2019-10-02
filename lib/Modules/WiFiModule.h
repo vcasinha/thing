@@ -233,7 +233,6 @@ class WiFiModule : public Module
                     this->attemptConnection("", "");
                 }
             }
-            MDNS.update();
         }
     private:
 
