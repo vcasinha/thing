@@ -7,6 +7,7 @@
 #include "Module.h"
 #include "MQTTModule.h"
 #include "TimeModule.h"
+#include "ServerModule.h"
 #include "Vector.h"
 #include "UnitFactory.h"
 #include "Unit.h"
@@ -16,6 +17,7 @@ class UnitManagerModule : public Module
     public:
         MQTTModule *_mqtt;
         TimeModule * _time;
+        ServerModule * _server;
         bool _state = false;
         unsigned int _pin = 0;
         Vector<Unit *> _units;

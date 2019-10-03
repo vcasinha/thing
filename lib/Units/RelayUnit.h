@@ -25,6 +25,7 @@ class RelayUnit final : public Unit
         virtual void onCommand(String data);
         virtual void loop();
         virtual void MQTTLoop();
+        virtual void getStatus(JsonObject &status);
 };
 
 #endif

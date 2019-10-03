@@ -64,6 +64,7 @@ public:
     virtual void setup() {}
     virtual void loop() {}
     virtual void MQTTLoop() {}
+    virtual void getStatus(JsonObject &status) { }
 };
 
 #endif

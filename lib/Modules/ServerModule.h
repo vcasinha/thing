@@ -99,36 +99,6 @@ public:
             this->processUpload();
         });
 
-        this->_webServer->on("/file", HTTP_GET, [this]() {
-            if (!this->isAuthenticated())
-            {
-                return;
-            }
-
-            String content_type = "application/json";
-
-            if(!this->_webServer->hasArg("path"))
-            {
-                Log.error("(web) 'path' is required");
-                this->_webServer->send(500, "application/json", "{\"message\":\"'path' is required\"}");
-                return;
-            }
-
-            String path = this->_webServer->arg("path");
-
-            Log.notice("(webServer.configuration.GET) ** Read configuration file '%s'", path.c_str());
-            if (this->_storageModule->exists(path.c_str()) == false)
-            {
-                Log.error("(web) File not found '%s'", path.c_str());
-                this->_webServer->send(400, "application/json", "{\"message\":\"File not found\"}");
-                return;
-            }
-
-            File file = this->_storageModule->getFile(path.c_str(), "r");
-            this->_webServer->streamFile(file, content_type);
-            file.close();
-        });
-
         this->_webServer->on("/file", HTTP_POST, [&]() {
             if (!this->isAuthenticated())
             {
@@ -281,11 +251,8 @@ public:
             if (!this->isAuthenticated()) {
                 return;
             }
-            String uri = this->_webServer->uri();
-            String output = "Frontpage";
-
-            Log.notice("(Server) Serving %s ", uri.c_str());
-            this->_webServer->send(200, "text/html", output);
+            this->_webServer->sendHeader("Location", "/hotspot-detect.html", true); //Redirect to our html web page
+            this->_webServer->send(302, "text/plane", "");
         });
 
         this->_webServer->onNotFound([&]() {
