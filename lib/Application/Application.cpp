@@ -11,7 +11,6 @@
 #include "RFModule.h"
 #endif
 
-#include "PersWiFiManager.h"
 #include "ServerModule.h"
 #include "TimeModule.h"
 #include "UnitManagerModule.h"
@@ -46,7 +45,6 @@ Application::Application(const char * id)
     this->loadModule(new StorageModule());
     this->loadModule(new WiFiModule());
     this->loadModule(new TimeModule());
-    this->loadModule(new ServerModule());
     this->loadModule(new MQTTModule());
 
     #ifdef RFMODULE_SUPPORT
@@ -54,6 +52,7 @@ Application::Application(const char * id)
     #endif
 
     this->loadModule(new UnitManagerModule());
+    this->loadModule(new ServerModule());
 }
 
 void Application::loadModule(Module * module)

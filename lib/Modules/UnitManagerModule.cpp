@@ -61,6 +61,7 @@ void UnitManagerModule::boot(JsonObject & config)
     this->_mqtt->registerCallback(this);
 
     this->_time = (TimeModule *)this->_application->getModule("time");
+    this->_server = (ServerModule * )this->_application->getModule("server");
 
     if (config.containsKey("units"))
     {
@@ -76,6 +77,38 @@ void UnitManagerModule::boot(JsonObject & config)
 
 void UnitManagerModule::setup(void)
 {
+    this->_server->_webServer->on("/unit", HTTP_GET, [&]() {
+        if (!this->_server->isAuthenticated())
+        {
+            return;
+        }
+
+        const char *content_type = "application/json";
+
+        if (!this->_server->_webServer->hasArg("id"))
+        {
+            Log.error("(web) 'id' is required");
+            this->_server->_webServer->send(500, content_type, "{\"message\":\"'id' is required\"}");
+            return;
+        }
+
+        String unitID = this->_server->_webServer->arg("id");
+        Unit *u = this->getUnitByID(unitID);
+
+        if (!u)
+        {
+            this->_server->_webServer->send(500, content_type, "{\"message\":\"Invalid unit ID\"}");
+            return;
+        }
+
+        DynamicJsonDocument buffer(1024);
+        JsonObject o = buffer.to<JsonObject>();
+        u->getStatus(o);
+        String json;
+        serializeJson(buffer, json);
+        this->_server->_webServer->send(200, content_type, json.c_str());
+    });
+
     //Log.notice("Setup devices");
     for (unsigned int i = 0; i < this->_units.size(); i++)
     {

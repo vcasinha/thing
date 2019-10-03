@@ -164,8 +164,9 @@ public:
     virtual void onCommand(String) {}
     virtual void config(JsonObject &config) {}
     virtual void setup() {}
-    virtual void loop(unsigned long, unsigned long,  unsigned long) {}
-    virtual void MQTTLoop(unsigned long, unsigned long) {}
+    virtual void loop() {}
+    virtual void MQTTLoop() {}
+    virtual void getStatus(JsonObject &status) { }
 };
 
 #endif

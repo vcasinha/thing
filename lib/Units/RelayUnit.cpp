@@ -1,3 +1,4 @@
+#include <ArduinoJson.h>
 #include "RelayUnit.h"
 
 RelayUnit::RelayUnit()
@@ -9,6 +10,7 @@ void RelayUnit::config(JsonObject &config)
 {
     this->_pin = config["pin"];
     pinMode(this->_pin, OUTPUT);
+    this->_state = digitalRead(this->_pin) == HIGH;
     Log.notice("(relay.construct) Switch on pin %u", this->_pin);
 
     this->_useButton = config["useButton"];
@@ -19,10 +21,21 @@ void RelayUnit::config(JsonObject &config)
         this->_invertPin = config["invertPin"];
         this->_invertState = config["invertState"];
 
-        pinMode(this->_buttonPin, INPUT);
+        //pinMode(this->_buttonPin, INPUT_PULLUP);
 
         Log.notice("(relay.construct) Linked button on pin %u", this->_pin);
     }
+}
+
+void RelayUnit::getStatus(JsonObject & status)
+{
+    status["pin"] = this->_pin;
+    status["state"] = this->_state;
+    status["useButton"] = this->_useButton;
+    status["buttonPin"] = this->_buttonPin;
+    status["triggerButton"] = this->_triggerButton;
+    status["buttonInvertPin"] = this->_invertPin;
+    status["butonInvertState"] = this->_invertState;
 }
 
 void RelayUnit::updateState(bool state)
@@ -38,8 +51,7 @@ void RelayUnit::updateState(bool state)
 
 void RelayUnit::setup()
 {
-    //UnitManagerModule *um = (UnitManagerModule *) this->_application->getModule("unit_manager");
-    this->getUnitByID(this->_id)->setState(true);
+
 }
 
 void RelayUnit::onCommand(String data)

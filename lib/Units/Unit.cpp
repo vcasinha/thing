@@ -37,8 +37,9 @@ void Unit::ready()
         });
     }
 
-    this->publishAvailability("available");
     this->setup();
+    this->publishAvailability("available");
+    this->publishState(this->_state ? "ON" : "OFF");
 }
 
 void Unit::publish(const char *topic, const char *payload)
