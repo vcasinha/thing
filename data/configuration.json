@@ -23,26 +23,14 @@
     },
     "unit_manager": {
         "units": {
-            "dht": {
-                "type": "dht",
-                "id": "dht",
-                "location": "office",
-                "pin": 2
-            },
-            "switch": {
-                "id": "switch",
+            "relay": {
+                "id": "relay01",
                 "location": "nowhere",
-                "type": "switch",
+                "type": "relay",
                 "pin": 13,
                 "useButton": true,
                 "buttonPin": 0,
                 "invertPin": true
-            },
-            "meter": {
-                "type": "power_meter",
-                "id": "meter",
-                "_mVPerAmp": "100",
-                "location": "office"
             }
         }
     }
