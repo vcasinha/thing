@@ -83,7 +83,7 @@ void Application::setup(void)
 {
     int max_json_size = 2048;
     DynamicJsonDocument JSONDoc(max_json_size);
-    char filename[100];
+    char filename[100] = "/configuration.json";
     File file;
     String config_json, default_config = "{\"mqtt\":{\"hostname\":\"petitmaison.duckdns.org\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"}}";
 
@@ -91,7 +91,6 @@ void Application::setup(void)
 
     StorageModule * storage = (StorageModule *) this->getModule("storage");
 
-    sprintf(filename, "/configuration.json");
     Log.notice("(application.setup) Reading configuration file %s ", filename);
 
     //Prevent boot loop

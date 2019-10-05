@@ -1,0 +1,73 @@
+{
+    "device": {
+        "name": "proio",
+        "location": "office",
+        "password": "test1234",
+        "secure": false
+    },
+    "time": {
+        "offset": 3600,
+        "updateIntervalMS": 60000,
+        "NTPServerAddress": "europe.pool.ntp.org"
+    },
+    "mqtt": {
+        "hostname": "petitmaison.duckdns.org",
+        "username": "mqtt",
+        "password": "mqtt",
+        "root_topic": "home"
+    },
+    "rf": {
+        "disable": false,
+        "receive_pin": 4,
+        "transmit_pin": 5
+    },
+    "unit_manager": {
+        "units": {
+            "relay": {
+                "id": "switch1",
+                "location": "nowhere",
+                "type": "relay",
+                "pin": 12,
+                "useButton": true,
+                "buttonPin": 0,
+                "invertPin": true
+            },
+            "relay2": {
+                "id": "switch2",
+                "location": "nowhere",
+                "type": "relay",
+                "pin": 5,
+                "useButton": true,
+                "buttonPin": 9,
+                "invertPin": true
+            },
+            "relay3": {
+                "id": "switch3",
+                "location": "nowhere",
+                "type": "relay",
+                "pin": 4,
+                "useButton": true,
+                "buttonPin": 10,
+                "invertPin": true,
+                "triggerButton": true
+            },
+            "relay4": {
+                "id": "switch4",
+                "location": "nowhere",
+                "type": "relay",
+                "pin": 15,
+                "useButton": true,
+                "buttonPin": 14,
+                "invertPin": true,
+                "triggerButton": true
+            },
+            "led": {
+                "id": "led",
+                "location": "nowhere",
+                "type": "relay",
+                "pin": 6,
+                "useButton": false
+            }
+        }
+    }
+}
