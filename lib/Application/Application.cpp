@@ -29,7 +29,7 @@ Application::Application(const char * id)
     Log.notice("(application.construct) CPU Frequency %lMHz", ESP.getCpuFreqMHz());
     FlashMode_t ideMode = ESP.getFlashChipMode();
     Log.notice("(application.construct) Flash IDE mode %s", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
-    delay(3000);
+    //delay(3000);
     if (ideSize != realSize)
     {
         Log.notice("(application.construct) Flash Chip configuration wrong! ");
@@ -41,8 +41,8 @@ Application::Application(const char * id)
 
     Log.notice("(application.construct) Load application modules ");
 
-    this->loadModule(new DeviceModule());
     this->loadModule(new StorageModule());
+    this->loadModule(new DeviceModule());
     this->loadModule(new WiFiModule());
     this->loadModule(new TimeModule());
     this->loadModule(new MQTTModule());
@@ -81,7 +81,8 @@ Module * Application::getModule(const char * name)
 
 void Application::setup(void)
 {
-    DynamicJsonDocument JSONDoc(2048);
+    int max_json_size = 2048;
+    DynamicJsonDocument JSONDoc(max_json_size);
     char filename[100];
     File file;
     String config_json, default_config = "{\"mqtt\":{\"hostname\":\"petitmaison.duckdns.org\",\"username\":\"mqtt\",\"password\":\"mqtt\",\"root_topic\":\"home\"}}";
@@ -92,14 +93,27 @@ void Application::setup(void)
 
     sprintf(filename, "/configuration.json");
     Log.notice("(application.setup) Reading configuration file %s ", filename);
+
+    //Prevent boot loop
+    if(storage->exists("/boot_success.log"))
+    {
+        storage->remove("/boot_success.log");
+    }
+    else
+    {
+        //Safe mode
+        this->_safeMode = true;
+    }
+
     config_json = storage->read(filename);
 
     //Log.notice("(application.) Configuration: %s ", config_json.c_str());
 
-    if(config_json.equals(""))
+    if(config_json.equals("") or config_json.length() > max_json_size)
     {
         Log.warning("(application.setup) Using default configuration ");
         config_json = default_config;
+        this->_defaultConfig = true;
     }
 
     auto error = deserializeJson(JSONDoc, config_json);
@@ -123,8 +137,9 @@ void Application::setup(void)
         //Module * module = this->getModule(name);
         Module * module = this->_modules[i];
         bool disabled = false;
-        if(module == NULL)
+        if(module == NULL || (this->_safeMode && module->_safeMode == false))
         {
+            module->disable();
             continue;
         }
 
@@ -195,6 +210,7 @@ void Application::setup(void)
     Log.notice("(application.setup) ### WiFi on http://%s.local/hotspot-detect.html", device->_hostname.c_str());
     Log.notice("(application.setup) ###");
     Log.notice("(application.setup) #################################################################################");
+    storage->write("/boot_success.log", "OK");
 }
 
 void Application::loop(void)

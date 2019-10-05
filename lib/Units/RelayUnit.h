@@ -13,8 +13,8 @@ class RelayUnit final : public Unit
         unsigned int _buttonPin;
         bool _useButton;
         bool _buttonState;
-        bool _triggerButton;
-        bool _invertPin;
+        bool _buttonTrigger;
+        bool _buttonInvert;
         bool _invertState;
         unsigned int _previousPinState;
 

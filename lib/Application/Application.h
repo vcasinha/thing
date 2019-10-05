@@ -14,6 +14,8 @@ public:
     WiFiClient _wifiClient;
     PubSubClient _client;
     const char *_id;
+    bool _safeMode = false;
+    bool _defaultConfig = false;
     String _hostname;
 
     Application(const char *);

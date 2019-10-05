@@ -45,7 +45,7 @@ class StorageModule: public Module
 
         bool write(const char * filename, const char * module_data)
         {
-            Log.trace("(storage.write) Open file '%s'", filename);
+            Log.trace("(storage.write) Write on file '%s'", filename);
             File file = SPIFFS.open(filename, "w");
             if (!file)
             {

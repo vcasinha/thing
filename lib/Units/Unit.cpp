@@ -1,22 +1,23 @@
 #include "Unit.h"
 #include "UnitManagerModule.h"
 
-void Unit::boot(Application *app, JsonObject &config)
+void Unit::boot(String unitID, JsonObject & config, Application *app)
 {
     this->_application = app;
     this->_mqtt = (MQTTModule *)this->_application->getModule("mqtt");
 
-    this->_id = config["id"].as<String>();
+    this->_id = unitID;
     this->_state = config["state"].as<bool>() | false;
     this->_location = config["location"] | "unknown";
-    this->_loop_period_ms = config["loop_period_ms"] | this->_loop_period_ms;
+    this->_updatePeriod = config["loop_period_ms"] | this->_updatePeriod;
     this->_MQTTUpdatePeriod = config["mqtt_update_period"] | this->_MQTTUpdatePeriod;
-    this->config(config);
 
     this->_mqtt->makeTopic(this->_commandTopic, this->_type, this->_location.c_str(), this->_id.c_str(), "command");
     this->_mqtt->makeTopic(this->_stateTopic, this->_type, this->_location.c_str(), this->_id.c_str(), "state");
     this->_mqtt->makeTopic(this->_availabilityTopic, this->_type, this->_location.c_str(), this->_id.c_str(), "available");
     this->_mqtt->subscribe(this->_commandTopic);
+
+    this->config(config);
 
     Log.notice("(device.boot) Booting as %s@%s (%s)", this->_id.c_str(), this->_location.c_str(), this->_type);
 }
@@ -30,9 +31,9 @@ void Unit::ready()
         });
     }
 
-    if (this->_loop_period_ms > 0)
+    if (this->_updatePeriod > 0)
     {
-        this->_loopTicker->attach_scheduled(this->_loop_period_ms, [&]() {
+        this->_loopTicker->attach_scheduled(this->_updatePeriod, [&]() {
             this->loop();
         });
     }
@@ -66,7 +67,7 @@ void Unit::publishAvailability(const char *payload)
 
 void Unit::setState(bool state)
 {
-    Log.notice("(device.setState) Set state on '%s' to '%s'", this->_id.c_str(), this->_state ? "ON" : "OFF");
+    Log.notice("(unit.setState) Set state on '%s' to '%s'", this->_id.c_str(), this->_state ? "ON" : "OFF");
     this->_state = state;
     this->publishState(this->_state ? "ON" : "OFF");
 }

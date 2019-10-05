@@ -150,7 +150,7 @@ public:
         this->config(config);
     }
 
-    void boot(Application *app, JsonObject &config);
+    void boot(String unitID, JsonObject &config, Application *app);
     void ready();
     Unit * getUnitByID(String unitID);
     void publish(const char *topic, const char *payload);

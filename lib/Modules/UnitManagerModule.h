@@ -20,7 +20,7 @@ class UnitManagerModule : public Module
         bool _state = false;
         unsigned int _pin = 0;
         Vector<Unit *> _units;
-        Vector<UnitFactory *> _factories;
+        Vector<UnitFactory *> _factories = Vector<UnitFactory *>();;
 
         UnitManagerModule()
         {
@@ -29,10 +29,32 @@ class UnitManagerModule : public Module
             //this->addFactory(new BlinkFactory());
         }
 
+        Unit * getUnitByID(string unit_id)
+        {
+            for (unsigned int i = 0; i < this->_units.size(); i++)
+            {
+                if (this->_units[i]->id.equals(unit_id))
+                {
+                    return this->_units[i];
+                }
+            }
+        }
+
         void addFactory(UnitFactory *factory)
         {
             Log.notice("(unitManager.addFactory) Load factory of %s devices.", factory->_unitType.c_str());
             this->_factories.push(factory);
+        }
+
+        UnitFactory * getFactory(String unit_type)
+        {
+            for (unsigned int i = 0; i < this->_factories.size(); i++)
+            {
+                if (this->_factories[i]->_unitType.equals(unit_type))
+                {
+                    return this->_factories[i];
+                }
+            }
         }
 
         void makeUnit(JsonObject config)
@@ -114,50 +136,11 @@ class UnitManagerModule : public Module
             }
         }
 
-        virtual void setup(void)
-        {
-            //Log.notice("Setup devices");
-            for (unsigned int i = 0; i < this->_units.size(); i++)
-            {
-                this->_units[i]->setMQTT(this->_mqtt);
-            }
-        }
-
-        void callback(char *topic, unsigned char *payload, unsigned int length)
-        {
-            String topic_string = topic;
-            payload[length] = '\0';
-            String data = (char *)payload;
-            data.trim();
-
-            Log.trace("(unitsManager.callback) Unit callback on topic '%s' Data: %s", topic_string.c_str(), data.c_str());
-            for (unsigned int i = 0; i < this->_units.size(); i++)
-            {
-                this->_units[i]->callback(topic_string, data);
-            }
-        }
-
-        virtual void loop(unsigned long delta_time)
-        {
-            unsigned long current_time = this->_time->getTimestamp();
-            for (unsigned int i = 0; i < this->_units.size(); i++)
-            {
-                Unit *unit = this->_units[i];
-                unsigned long current_millis = millis();
-                unsigned long delta_millis = current_millis - unit->_lastUpdate;
-                if (unit->_updatePeriod == 0 || delta_millis > unit->_updatePeriod)
-                {
-                    unit->loop(current_time, current_millis, delta_millis);
-                    unit->_lastUpdate = current_millis;
-                }
-
-                unsigned long delta_time = current_time - unit->_previousMQTTUpdate;
-                if(delta_time > unit->_MQTTUpdatePeriod)
-                {
-                    unit->MQTTLoop(current_time, delta_time);
-                    unit->_previousMQTTUpdate = current_time;
-                }
-            }
-        }
+        void makeUnit(String unitID, JsonObject config);
+        void config(JsonObject & config);
+        void boot(JsonObject & config);
+        void setup(void);
+        void callback(char *topic, unsigned char *payload, unsigned int length);
 };
+
 #endif

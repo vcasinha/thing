@@ -1,13 +1,13 @@
 #include <UnitManagerModule.h>
 
-Vector<UnitFactory *> UnitManagerModule::_factories = Vector<UnitFactory *>();
+
 
 UnitManagerModule::UnitManagerModule()
 {
     this->init("unit_manager", 100);
 }
 
-void UnitManagerModule::makeUnit(JsonObject config)
+void UnitManagerModule::makeUnit(String unitID, JsonObject config)
 {
     String unit_type = config["type"].as<String>();
     //String json_config = "";
@@ -17,8 +17,8 @@ void UnitManagerModule::makeUnit(JsonObject config)
     UnitFactory *factory = UnitManagerModule::getFactory(unit_type);
     if(factory)
     {
-        Unit *unit = factory->make();
-        unit->boot(this->_application, config);
+        Unit * unit = factory->make();
+        unit->boot(unitID, config, this->_application);
         this->_units.push(unit);
     }
     else
@@ -70,7 +70,7 @@ void UnitManagerModule::boot(JsonObject & config)
         for (JsonObject::iterator it = root.begin(); it != root.end(); ++it)
         {
             //config.prettyPrintTo(Serial);
-            this->makeUnit(it->value().as<JsonObject>());
+            this->makeUnit(it->key().c_str(), it->value().as<JsonObject>());
         }
     }
 }
@@ -109,10 +109,59 @@ void UnitManagerModule::setup(void)
         this->_server->_webServer->send(200, content_type, json.c_str());
     });
 
+    this->_server->_webServer->on("/unit", HTTP_POST, [&]() {
+        if (!this->_server->isAuthenticated())
+        {
+            return;
+        }
+
+        const char *content_type = "application/json";
+
+        if (!this->_server->_webServer->hasArg("id"))
+        {
+            Log.error("(web) 'id' is required");
+            this->_server->_webServer->send(500, content_type, "{\"message\":\"'id' is required\"}");
+            return;
+        }
+
+            if (!this->_server->_webServer->hasArg("plain"))
+            {
+                this->_server->_webServer->send(500, "application/json", "{\"message\":\"Body missing\"}");
+                return;
+            }
+
+        String body = this->_server->_webServer->arg("plain");
+        DynamicJsonDocument JSONDoc(1024);
+        auto error = deserializeJson(JSONDoc, body);
+        JsonObject json = JSONDoc.as<JsonObject>();
+
+        String unitID = this->_server->_webServer->arg("id");
+        Unit *unit = this->getUnitByID(unitID);
+
+        if(unit)
+        {
+            unit->config(json);
+        }
+        else
+        {
+            this->makeUnit(unitID, json)
+        }
+
+        this->_server->_webServer->send(200, content_type, "{}");
+    });
+
     //Log.notice("Setup devices");
     for (unsigned int i = 0; i < this->_units.size(); i++)
     {
         Unit *unit = this->_units[i];
+        unit->ready();
+    }
+
+        //Log.notice("Setup devices");
+    for (unsigned int i = 0; i < this->_units.size(); i++)
+    {
+        Unit *unit = this->_units[i];
+        unit->setMQTT(this->_mqtt);
         unit->ready();
     }
 }

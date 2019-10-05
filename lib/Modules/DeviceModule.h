@@ -23,7 +23,9 @@ class DeviceModule : public Module
 
         DeviceModule()
         {
-            this->_name = "device";
+            this->init("device", 100);
+            this->_safeMode = true;
+
             char tmp[10];
             sprintf(tmp, "ESP%6X", ESP.getFlashChipId());
             this->_boardID = tmp;

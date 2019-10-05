@@ -11,7 +11,9 @@
             const char * _name = "unnamed";
             unsigned long _loop_time = 0;
             unsigned long _loop_period_ms = 0;
+            unsigned long _last_update = 0;
             bool _enabled = true;
+            bool _safeMode = false;
 
             Module()
             {
@@ -22,7 +24,25 @@
                 this->_application = application;
             }
 
-            void init(const char * name, unsigned long period)
+            void ready()
+            {
+                if(this->_enabled)
+                {
+                    this->_last_update = millis();
+                    Log.notice("(module.ready) Attaching '%s' with period %l ms", this->_name, this->_loop_period_ms);
+                }
+            }
+
+            void init(const char * name, unsigned long loop_period_ms = 0)
+            {
+                this->_name = name;
+                if(loop_period_ms > 0)
+                {
+                    this->_loop_period_ms = loop_period_ms;
+                }
+            }
+
+            void disable()
             {
                 _name = name;
                 _loop_period_ms = period;
