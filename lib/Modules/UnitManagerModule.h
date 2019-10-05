@@ -63,7 +63,7 @@ class UnitManagerModule : public Module
 
         UnitManagerModule();
 
-        void makeUnit(JsonObject config);
+        void makeUnit(String unitID, JsonObject config);
         void config(JsonObject & config);
         void boot(JsonObject & config);
         void setup(void);

@@ -22,17 +22,21 @@ class WiFiModule : public Module
         unsigned int _timeSinceLastConnection = 0;
         unsigned long _elapsedTime = 0;
         MDNSResponder * _mdns;
+        DNSServer *_nameServer;
+
         WiFiModule()
         {
-            _name = "wifi";
+            this->init("wifi", 100);
+            WiFi.begin();
+            this->_safeMode = true;
         }
 
         void boot(JsonObject & config)
         {
+            this->_mdns = new MDNSResponder();
+            this->_nameServer = new DNSServer();
             this->_serverModule = (ServerModule *)this->_application->getModule("server");
             this->_device = (DeviceModule *)this->_application->getModule("device");
-            this->_mdns = new MDNSResponder();
-            WiFi.begin();
         }
 
         void setup(void)
@@ -58,10 +62,6 @@ class WiFiModule : public Module
 
         void initWiFiHandlers()
         {
-            IPAddress apIP(192, 168, 1, 1);
-            this->_serverModule->_nameServer->setErrorReplyCode(DNSReplyCode::NoError);
-            this->_serverModule->_nameServer->start((byte)53, "*", apIP);
-
             this->_serverModule->_webServer->on("/wifi/list", [&]() {
                 if (!this->_serverModule->isAuthenticated())
                 {
@@ -205,6 +205,9 @@ class WiFiModule : public Module
                 WiFi.softAP(this->_device->_hostname.c_str());
             }
 
+            this->_nameServer->setErrorReplyCode(DNSReplyCode::NoError);
+            this->_nameServer->start((byte)53, "*", apIP);
+
             Log.notice("(wiFiModule.startAPMode)### AP Mode http://%s.local (%s)", this->_device->_hostname.c_str(), WiFi.localIP().toString().c_str());
         }
 
@@ -233,6 +236,7 @@ class WiFiModule : public Module
                     this->attemptConnection("", "");
                 }
             }
+            this->_nameServer->processNextRequest();
         }
     private:
 

@@ -13,8 +13,10 @@
         public:
             const char * _name = "unnamed";
             unsigned long _loop_period_ms = 1000;
+            unsigned long _last_update = 0;
             Ticker * _ticker;
             bool _enabled = true;
+            bool _safeMode = false;
 
             Module()
             {
@@ -30,9 +32,13 @@
             {
                 if(this->_enabled)
                 {
+                    this->_last_update = millis();
                     Log.notice("(module.ready) Attaching '%s' with period %l ms", this->_name, this->_loop_period_ms);
                     this->_ticker->attach_ms_scheduled(this->_loop_period_ms, [&]() {
-                        this->loop(0);
+                        unsigned long now = millis();
+                        unsigned long delta = now - this->_last_update;
+                        this->_last_update = now;
+                        this->loop(delta);
                     });
                 }
             }

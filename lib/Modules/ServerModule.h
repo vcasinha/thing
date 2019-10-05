@@ -26,14 +26,14 @@ public:
     DeviceModule *_deviceModule;
     StorageModule *_storageModule;
     ESP8266WebServer *_webServer;
-    DNSServer *_nameServer;
     File _uploadFile;
 
     //PersWiFiManager *_wifiManager;
 
     ServerModule()
     {
-        this->_name = "server";
+        this->init("server", 100);
+        this->_safeMode = true;
     }
 
     ~ServerModule()
@@ -44,7 +44,6 @@ public:
     {
         this->_deviceModule = (DeviceModule *)this->_application->getModule("device");
         this->_storageModule = (StorageModule *)this->_application->getModule("storage");
-        this->_nameServer = new DNSServer();
         this->_webServer = new ESP8266WebServer(80);
         //this->_wifiManager = new PersWiFiManager(this->_webServer, this->_nameServer);
 
@@ -128,6 +127,39 @@ public:
             if (this->_storageModule->write(path.c_str(), body.c_str()) == false)
             {
                 this->_webServer->send(500, "application/json", "{\"_status\":\"Could not write\"}");
+                return;
+            }
+
+            this->_webServer->send(200, "application/json", "{\"_status\":\"OK\"}");
+        });
+
+        this->_webServer->on("/file", HTTP_DELETE, [&]() {
+            if (!this->isAuthenticated())
+            {
+                return;
+            }
+
+            String content_type = "application/json";
+
+            if (!this->_webServer->hasArg("path"))
+            {
+                Log.error("(web) 'path' is required");
+                this->_webServer->send(500, "application/json", "{\"message\":\"'path' is required\"}");
+                return;
+            }
+
+            String path = this->_webServer->arg("path");
+            Log.notice("(web.configuration.DELETE) Delete file '%s'", path.c_str());
+
+            if(this->_storageModule->exists(path.c_str()) == false)
+            {
+                this->_webServer->send(500, "application/json", "{\"_status\":\"File does not exist\"}");
+                return;
+            }
+
+            if (this->_storageModule->remove(path.c_str()) == false)
+            {
+                this->_webServer->send(500, "application/json", "{\"_status\":\"Could not remove file\"}");
                 return;
             }
 
@@ -241,7 +273,8 @@ public:
             json["flashChipSpeed"] = ESP.getFlashChipSpeed();
             FlashMode_t ideMode = ESP.getFlashChipMode();
             json["flashMode"] = (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN");
-
+            json["safeMode"] = this->_application->_safeMode;
+            json["defaultConfig"] = this->_application->_defaultConfig;
             serializeJson(buffer, response);
 
             this->_webServer->send(200, "application/json", response);
@@ -349,7 +382,6 @@ public:
     {
         //Count time and reconnect if not connected
         this->_webServer->handleClient();
-        this->_nameServer->processNextRequest();
     }
 };
 
