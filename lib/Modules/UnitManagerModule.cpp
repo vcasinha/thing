@@ -144,7 +144,7 @@ void UnitManagerModule::setup(void)
         }
         else
         {
-            this->makeUnit(unitID, json)
+            this->makeUnit(unitID, json);
         }
 
         this->_server->_webServer->send(200, content_type, "{}");
