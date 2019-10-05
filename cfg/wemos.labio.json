@@ -1,0 +1,36 @@
+{
+    "device": {
+        "name": "labio",
+        "location": "office",
+        "password": "test1234",
+        "secure": false
+    },
+    "time": {
+        "offset": 3600,
+        "updateIntervalMS": 60000,
+        "NTPServerAddress": "europe.pool.ntp.org"
+    },
+    "mqtt": {
+        "hostname": "petitmaison.duckdns.org",
+        "username": "mqtt",
+        "password": "mqtt",
+        "root_topic": "home"
+    },
+    "rf": {
+        "disable": false,
+        "receive_pin": 14,
+        "transmit_pin": 12
+    },
+    "unit_manager": {
+        "units": {
+            "led": {
+                "id": "led",
+                "location": "lab",
+                "type": "relay",
+                "pin": 2,
+                "useButton": false,
+                "invertState": true
+            }
+        }
+    }
+}
