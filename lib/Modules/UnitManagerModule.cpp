@@ -1,12 +1,5 @@
 #include <UnitManagerModule.h>
 
-
-
-UnitManagerModule::UnitManagerModule()
-{
-    this->init("unit_manager", 100);
-}
-
 void UnitManagerModule::makeUnit(String unitID, JsonObject config)
 {
     String unit_type = config["type"].as<String>();
@@ -179,3 +172,4 @@ void UnitManagerModule::callback(char *topic, unsigned char *payload, unsigned i
         this->_units[i]->callback(topic_string, data);
     }
 }
+

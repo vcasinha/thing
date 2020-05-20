@@ -87,7 +87,7 @@ void RelayUnit::loop()
     this->_previousPinState = currentPinState;
 }
 
-void RelayUnit::MQTTLoop()
+void RelayUnit::MQTTLoop(unsigned long current_time, unsigned long delta_time)
 {
     this->publishState(this->_state ? "ON" : "OFF");
 }

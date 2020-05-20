@@ -69,35 +69,6 @@ public:
         }
     }
 
-    void publish(const char *topic, const char *payload)
-    {
-        this->_mqtt->publish(topic, payload);
-    }
-
-    void publishState(const char *payload)
-    {
-        this->_mqtt->publish(this->_stateTopic, payload);
-    }
-
-    void publishState(DynamicJsonDocument json_document)
-    {
-        String state;
-        serializeJson(json_document, state);
-        this->_mqtt->publish(this->_stateTopic, state.c_str());
-    }
-
-    void publishAvailability(const char *payload)
-    {
-        this->_mqtt->publish(this->_availabilityTopic, payload);
-    }
-
-    void setState(bool state)
-    {
-        this->_state = state;
-        Log.notice("(device.setState) Update state on '%s' to '%s'", this->_id.c_str(), this->_state ? "ON" : "OFF");
-        this->publishState(this->_state ? "ON" : "OFF");
-    }
-
     void setMQTT(MQTTModule *mqtt)
     {
         //Serial.printf("(DEVICE.setMQTT) %s (%s) on %s", this->_id.c_str(), this->_type.c_str(), this->_location.c_str());
@@ -109,25 +80,6 @@ public:
 
         this->setup();
         this->publishAvailability("available");
-    }
-
-    void callback(String topic, String payload)
-    {
-        if (topic.equals(this->_commandTopic))
-        {
-            this->onCommand(payload);
-        }
-    }
-
-    void boot(JsonObject & config)
-    {
-        this->_id = config["id"].as<String>();
-        this->_state = config["state"].as<bool>() | false;
-        this->_location = config["location"] | "unknown";
-        this->setPeriod(this->_updatePeriod);
-        this->config(config);
-
-        Log.notice("(device.boot) Booting as %s@%s (%s)", this->_id.c_str(), this->_location.c_str(), this->_type.c_str());
     }
 
     virtual void unitConfig(JsonObject & config)
@@ -165,7 +117,7 @@ public:
     virtual void config(JsonObject &config) {}
     virtual void setup() {}
     virtual void loop() {}
-    virtual void MQTTLoop() {}
+    virtual void MQTTLoop(unsigned long current_time, unsigned long delta_time) {}
     virtual void getStatus(JsonObject &status) { }
 };
 

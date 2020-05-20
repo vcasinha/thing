@@ -24,7 +24,7 @@ class RelayUnit final : public Unit
         void updateState(bool state);
         virtual void onCommand(String data);
         virtual void loop();
-        virtual void MQTTLoop();
+        virtual void MQTTLoop(unsigned long current_time, unsigned long delta_time);
         virtual void getStatus(JsonObject &status);
 };
 

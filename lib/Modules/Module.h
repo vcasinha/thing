@@ -42,12 +42,6 @@
                 }
             }
 
-            void disable()
-            {
-                _name = name;
-                _loop_period_ms = period;
-            }
-
             virtual void boot(JsonObject &) {};
             virtual void config(JsonObject &){};
             virtual void setup() {};
