@@ -2,6 +2,7 @@
 #define UNIT_MANAGER_MODULE_H
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ArduinoLog.h>
 #include "Module.h"
 #include "MQTTModule.h"
@@ -21,11 +22,6 @@ class UnitManagerModule : public Module
         unsigned int _pin = 0;
         Vector<Unit *> _units;
         Vector<UnitFactory *> _factories = Vector<UnitFactory *>();
-
-        UnitManagerModule()
-        {
-            this->init("unit_manager", 100);
-        }
 
         Unit * getUnitByID(String unit_id)
         {

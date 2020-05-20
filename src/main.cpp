@@ -34,8 +34,6 @@ void setup()
     //delay(5000);
     delay(1000);
     Log.notice("Booting %s v%s", application_name, application_version);
-
-    delay(1000);
     app = new Application(application_name);
     UnitManagerModule * manager = (UnitManagerModule *) app->getModule("unit_manager");
     manager->addFactory(new DHTFactory());
@@ -46,6 +44,4 @@ void setup()
 
 void loop(void)
 {
-    app->loop();
-    delay(10);
 }

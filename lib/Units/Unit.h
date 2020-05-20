@@ -3,6 +3,7 @@
 #include <ArduinoLog.h>
 #include <Arduino.h>
 #include "MQTTModule.h"
+#include "Application.h"
 
 class Unit
 {
@@ -15,7 +16,6 @@ public:
     String _id;
     String _location;
     String _type;
-    bool _useFrequency = false;
 
     unsigned long _lastUpdate = 0;
     unsigned long _updatePeriod = 60000;
@@ -26,17 +26,14 @@ public:
     char _availabilityTopic[100];
     char _stateTopic[100];
     bool _state = false;
+    bool _useFrequency = false;
 
     Unit()
     {
         this->_type = "unit";
     }
 
-    virtual ~Unit()
-    {
-    }
-
-    void init(const char *type, float mqtt_period = 60, unsigned long loop_period_ms = 0)
+    void init(String type, float mqtt_period = 60, unsigned long loop_period_ms = 0)
     {
         this->_type = type;
         this->_updatePeriod = loop_period_ms;

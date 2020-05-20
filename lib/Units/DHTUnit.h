@@ -28,10 +28,10 @@ public:
     {
         this->_pin = config["pin"] | 0;
         this->_dht.setup(this->_pin, DHTesp::AUTO_DETECT);
-        Log.notice("(DHT.config) DHT on pin %u", this->_pin);
+        Log.notice("(DHT.config) DHT on pin %d", this->_pin);
     }
 
-    virtual void MQTTLoop(unsigned long time, unsigned long delta_time)
+    virtual void MQTTLoop()
     {
         DynamicJsonDocument buffer(512);
         JsonObject json = buffer.to<JsonObject>();

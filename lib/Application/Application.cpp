@@ -157,7 +157,7 @@ void Application::setup(void)
         else
         {
             disabled = module_config["disable"] | false;
-            module->_loop_period_ms = module_config["update_period"] | module->_loop_period_ms;
+            module->_loop_period_ms = module_config["loop_period_ms"] | module->_loop_period_ms;
         }
 
         if (disabled == false)
@@ -183,6 +183,7 @@ void Application::setup(void)
         {
             Log.notice("(application.setup) * Setting up module '%s' *  ", module->_name);
             module->setup();
+            module->ready();
             delay(100);
         }
         else

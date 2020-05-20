@@ -143,13 +143,6 @@ void UnitManagerModule::setup(void)
         this->_server->_webServer->send(200, content_type, "{}");
     });
 
-    //Log.notice("Setup devices");
-    for (unsigned int i = 0; i < this->_units.size(); i++)
-    {
-        Unit *unit = this->_units[i];
-        unit->ready();
-    }
-
         //Log.notice("Setup devices");
     for (unsigned int i = 0; i < this->_units.size(); i++)
     {
@@ -172,4 +165,3 @@ void UnitManagerModule::callback(char *topic, unsigned char *payload, unsigned i
         this->_units[i]->callback(topic_string, data);
     }
 }
-

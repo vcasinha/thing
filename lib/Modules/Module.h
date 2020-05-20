@@ -2,8 +2,10 @@
 #define MODULE_H
 
     #include <Arduino.h>
+    #include <ArduinoLog.h>
     #include <ArduinoJson.h>
     #include "Application.h"
+
     class Application;
     class Module
     {
@@ -48,8 +50,8 @@
             virtual void loop(unsigned long) {};
             virtual String status() { return "Not implemented";};
             virtual void callback(char * topic, unsigned char * payload, unsigned int length) {};
-            void disable(void) { this->_enabled = false; }
             void enable(void) { this->_enabled = true; }
+            void disable(void) { this->_enabled = false; }
 
         protected:
             Application * _application;
